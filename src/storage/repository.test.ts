@@ -1,0 +1,47 @@
+import { describe, expect, it } from 'vitest'
+import { openDB } from 'idb'
+import { IndexedDBRepository } from './repository'
+import { fixture } from '../test/fixtures'
+
+describe('IndexedDB repository', () => {
+  it('persists across adapter instances', async () => {
+    const name = crypto.randomUUID()
+    const repo = new IndexedDBRepository(name)
+    const saved = await repo.execute({ type: 'import', data: fixture() })
+    expect(await new IndexedDBRepository(name).read()).toEqual(saved)
+  })
+  it('serializes concurrent writes without dropping projects', async () => {
+    const name = crypto.randomUUID()
+    const a = new IndexedDBRepository(name)
+    const b = new IndexedDBRepository(name)
+    await Promise.all([
+      a.execute({
+        type: 'saveProject',
+        input: { name: 'One', description: '', color: '#7d87ec', due: '' },
+      }),
+      b.execute({
+        type: 'saveProject',
+        input: { name: 'Two', description: '', color: '#6dc3a4', due: '' },
+      }),
+    ])
+    expect((await a.read()).projects).toHaveLength(2)
+    expect((await a.read()).revision).toBe(2)
+  })
+  it('leaves saved data intact after a failed mutation', async () => {
+    const repo = new IndexedDBRepository(crypto.randomUUID())
+    const before = await repo.execute({ type: 'import', data: fixture() })
+    await expect(repo.execute({ type: 'notes', id: 'missing', notes: 'Nope' })).rejects.toThrow()
+    expect(await repo.read()).toEqual(before)
+  })
+  it('refuses to overwrite an unknown or corrupted stored schema', async () => {
+    const name = crypto.randomUUID()
+    const repo = new IndexedDBRepository(name)
+    await repo.read()
+    const db = await openDB(name, 1)
+    await db.put('workspace', { schemaVersion: 900 }, 'current')
+    await expect(repo.read()).rejects.toThrow()
+    await expect(repo.execute({ type: 'profile', name: 'New' })).rejects.toThrow()
+    expect(await db.get('workspace', 'current')).toEqual({ schemaVersion: 900 })
+    db.close()
+  })
+})
