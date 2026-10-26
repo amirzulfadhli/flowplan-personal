@@ -15,7 +15,8 @@ import {
   UserRound,
   X,
 } from 'lucide-react'
-import { useRegisterSW } from 'virtual:pwa-register/react'
+import { BrowserOffline } from './components/BrowserOffline'
+import { isDesktop } from './storage/desktop'
 import { useWorkspace } from './state/WorkspaceContext'
 import { EditorsProvider, useEditor } from './components/Editors'
 import { Empty, Modal } from './components/ui'
@@ -52,11 +53,6 @@ function Shell() {
   const current =
     nav.find((n) => n.to !== '/' && location.pathname.startsWith(n.to))?.name ??
     (location.pathname === '/settings' ? 'Settings' : 'Home')
-  const {
-    offlineReady: [offlineReady],
-    needRefresh: [needRefresh],
-    updateServiceWorker,
-  } = useRegisterSW()
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
@@ -176,14 +172,6 @@ function Shell() {
               </button>
             </div>
           )}
-          {needRefresh && (
-            <div className="notice flex items-center justify-between gap-3">
-              <span>An update is ready. Save any open edits before reloading.</span>
-              <button className="btn" onClick={() => void updateServiceWorker(true)}>
-                Reload app
-              </button>
-            </div>
-          )}
           <Suspense fallback={<p role="status">Loading insights…</p>}>
             <Routes>
               <Route path="/" element={<Dashboard />} />
@@ -210,7 +198,7 @@ function Shell() {
               />
             </Routes>
           </Suspense>
-          {offlineReady && <p className="offline-note">Ready to reopen offline on this device.</p>}
+          {!isDesktop() && <BrowserOffline />}
         </main>
       </div>
       {search && <WorkspaceSearch onClose={() => setSearch(false)} />}

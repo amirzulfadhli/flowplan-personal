@@ -27,3 +27,52 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+  windows-desktop:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.99.1
+          components: rustfmt, clippy
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: windows-rust-${{ hashFiles('src-tauri/Cargo.lock') }}
+      - run: npm ci
+      - run: npm run build
+      - run: npm run build:desktop
+      - run: |
+          . ./scripts/windows-env.ps1
+          cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo test --manifest-path src-tauri/Cargo.toml --lib --locked
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
+      - run: npx playwright install chromium
+      - run: |
+          . ./scripts/windows-env.ps1
+          npm run desktop:build:test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run test:desktop
+      - run: |
+          . ./scripts/windows-env.ps1
+          npm run desktop:build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flowplan-windows-installer
+          path: src-tauri/target/release/bundle/nsis/*-setup.exe
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: desktop-verification
+          path: desktop-test-results/
+          retention-days: 7

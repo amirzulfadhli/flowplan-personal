@@ -1,5 +1,7 @@
 # Architecture decisions
 
+This document records the Phase 1 foundation. [Phase 2 desktop architecture](desktop.md) adds a Tauri 2 shell and SQLite adapter behind the same repository contract, with independent database migrations and transactional recovery copies. Browser behavior remains supported.
+
 ## 1. React, TypeScript, and Vite
 
 React components own presentation and temporary form state. TypeScript checks domain and UI boundaries. Dependencies are pinned and the npm lockfile is committed. The selected Vite toolchain supports the installed Node 22.15 runtime; Vite’s documented baseline is Node 20.19+ or 22.12+ ([official guide](https://vite.dev/guide/)). This project requires Node 22.12+.
@@ -51,4 +53,4 @@ These are current-state completion statistics, not event-sourced audit history. 
 
 `vite-plugin-pwa` generates a production precache manifest for all shipped assets. First-visit caching needs a network connection (or a reachable localhost server); subsequent loads work offline at the same origin. Updates use an explicit reload prompt to protect unsaved forms. There are no runtime data API calls, authentication tokens, or backend services.
 
-Tauri, SQLite, native windows/tray/island, AI integration, and synchronization remain future work. Phase 2 should first preserve export/import compatibility, implement a desktop repository with migrations, and test IndexedDB transfer into SQLite before adding OS-facing features.
+Phase 2 implements Tauri and SQLite while preserving the v1 JSON contract. Native tray/island, AI integration, and synchronization remain future work. See the desktop guide for the storage boundary, revision checks, migration procedure, and native lifecycle.

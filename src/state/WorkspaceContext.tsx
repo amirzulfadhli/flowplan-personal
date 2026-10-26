@@ -9,9 +9,16 @@ import {
 } from 'react'
 import type { Command } from '../domain/commands'
 import type { Workspace } from '../domain/model'
-import { IndexedDBRepository, type WorkspaceRepository } from '../storage/repository'
+import type { WorkspaceRepository } from '../storage/repository'
+import { createRepository } from '../storage/factory'
+import { isDesktop } from '../storage/desktop'
 
-const defaultRepository = new IndexedDBRepository()
+const defaultRepository = createRepository()
+function readFailure(error: unknown) {
+  if (isDesktop())
+    return `FlowPlan could not open its desktop database. ${error instanceof Error ? error.message : 'Check file permissions and available disk space.'} Existing data has not been replaced.`
+  return 'FlowPlan could not read local storage. Check browser storage permissions, then retry. Existing data has not been replaced.'
+}
 type Context = {
   data: Workspace
   execute: (command: Command) => Promise<boolean>
@@ -40,10 +47,8 @@ export function WorkspaceProvider({
     try {
       accept(await repository.read())
       setError('')
-    } catch {
-      setError(
-        'FlowPlan could not read local storage. Check browser storage permissions, then retry. Existing data has not been replaced.',
-      )
+    } catch (error) {
+      setError(readFailure(error))
     }
   }, [repository, accept])
   useEffect(() => {
@@ -53,11 +58,8 @@ export function WorkspaceProvider({
       .then((next) => {
         if (active) accept(next)
       })
-      .catch(() => {
-        if (active)
-          setError(
-            'FlowPlan could not read local storage. Check browser storage permissions, then retry. Existing data has not been replaced.',
-          )
+      .catch((error) => {
+        if (active) setError(readFailure(error))
       })
     if (typeof BroadcastChannel !== 'undefined') {
       channel.current = new BroadcastChannel('flowplan-changes')

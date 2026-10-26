@@ -1,0 +1,30 @@
+[package]
+name = "flowplan-personal"
+version = "0.2.0"
+description = "A local-first personal project workspace"
+authors = ["amirzulfadhli"]
+edition = "2021"
+rust-version = "1.99.1"
+default-run = "flowplan-personal"
+
+[lib]
+name = "flowplan_desktop"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-single-instance = "2"
+rusqlite = { version = "0.41", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
+tempfile = "3"
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]
+# Enables an isolated automation profile and WebView2 debug port; never used for packaging.
+desktop-test = ["tauri/devtools"]

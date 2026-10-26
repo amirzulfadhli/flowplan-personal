@@ -1,7 +1,7 @@
 {
   "name": "flowplan-personal",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "engines": {
     "node": ">=22.12.0"
@@ -16,9 +16,19 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "tauri": "tauri",
+    "dev:desktop": "vite --mode desktop",
+    "build:desktop": "tsc -b && vite build --mode desktop",
+    "desktop:dev": "tauri dev",
+    "desktop:build": "tauri build -- --locked",
+    "desktop:build:test": "tauri build --debug --no-bundle --features desktop-test -- --locked",
+    "test:database": "cargo test --manifest-path src-tauri/Cargo.toml --lib --locked",
+    "test:desktop": "node scripts/desktop-smoke.mjs",
+    "test:installed": "node scripts/installed-smoke.mjs"
   },
   "dependencies": {
+    "@tauri-apps/api": "2.12.4",
     "idb": "8.0.4",
     "lucide-react": "1.61.0",
     "react": "19.3.1",
@@ -31,6 +41,7 @@
     "@eslint/js": "10.0.1",
     "@playwright/test": "1.64.1",
     "@tailwindcss/vite": "4.3.3",
+    "@tauri-apps/cli": "2.12.4",
     "@testing-library/jest-dom": "7.0.1",
     "@testing-library/react": "16.3.3",
     "@testing-library/user-event": "14.6.8",

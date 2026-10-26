@@ -1,0 +1,14 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-workspace",
+  "description": "Only the local main window can access the workspace and user-selected backups.",
+  "windows": ["main"],
+  "permissions": [
+    "allow-read-workspace",
+    "allow-commit-workspace",
+    "allow-export-backup",
+    "allow-storage-info",
+    "allow-list-recovery",
+    "allow-read-recovery"
+  ]
+}

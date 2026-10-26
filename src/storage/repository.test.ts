@@ -33,6 +33,19 @@ describe('IndexedDB repository', () => {
     await expect(repo.execute({ type: 'notes', id: 'missing', notes: 'Nope' })).rejects.toThrow()
     expect(await repo.read()).toEqual(before)
   })
+  it('rejects a replacement reviewed before another browser tab saved changes', async () => {
+    const name = crypto.randomUUID()
+    const repo = new IndexedDBRepository(name)
+    const reviewed = await repo.execute({ type: 'import', data: fixture() })
+    const newer = await new IndexedDBRepository(name).execute({
+      type: 'profile',
+      name: 'Preserve this newer change',
+    })
+    await expect(
+      repo.execute({ type: 'import', data: fixture(), expectedRevision: reviewed.revision }),
+    ).rejects.toThrow('Cancel and review the import again')
+    expect(await repo.read()).toEqual(newer)
+  })
   it('refuses to overwrite an unknown or corrupted stored schema', async () => {
     const name = crypto.randomUUID()
     const repo = new IndexedDBRepository(name)

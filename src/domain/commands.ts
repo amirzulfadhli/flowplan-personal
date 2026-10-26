@@ -7,7 +7,7 @@ export type Command =
   | { type: 'deleteTask'; id: string }
   | { type: 'notes'; id: string; notes: string }
   | { type: 'profile'; name: string }
-  | { type: 'import'; data: Workspace }
+  | { type: 'import'; data: Workspace; expectedRevision?: number }
 
 /** Pure domain mutation. The repository runs this inside its atomic transaction. */
 export function applyCommand(
@@ -18,8 +18,13 @@ export function applyCommand(
   const data = structuredClone(current)
   const log = (projectId: string, message: string) =>
     data.activity.unshift({ id: crypto.randomUUID(), projectId, message, time: now })
-  if (command.type === 'import')
+  if (command.type === 'import') {
+    if (command.expectedRevision !== undefined && command.expectedRevision !== current.revision)
+      throw new Error(
+        'The workspace changed while you reviewed this backup. Cancel and review the import again.',
+      )
     return workspaceSchema.parse({ ...command.data, revision: current.revision + 1 })
+  }
   if (command.type === 'profile') data.profile.name = command.name
   if (command.type === 'saveProject') {
     const existing = data.projects.find((p) => p.id === command.id)
