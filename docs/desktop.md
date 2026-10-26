@@ -1,4 +1,4 @@
-# Phase 2: Windows desktop
+# Windows desktop
 
 FlowPlan Personal uses the same React UI in the browser and in Tauri 2. Desktop data is stored in SQLite; browser data remains in IndexedDB. Desktop startup never falls back to an empty browser workspace when SQLite fails.
 
@@ -28,7 +28,7 @@ Build a Windows installer:
 npm run desktop:build
 ```
 
-Output: `src-tauri/target/release/bundle/nsis/FlowPlan Personal_0.2.0_x64-setup.exe`. The NSIS installer is per-user and does not require administrator installation. It can bootstrap WebView2 if absent; that first-time dependency download requires connectivity. Once installed, application assets and SQLite work offline immediately.
+Output: `src-tauri/target/release/bundle/nsis/FlowPlan Personal_0.3.0_x64-setup.exe`. The NSIS installer is per-user and does not require administrator installation. It can bootstrap WebView2 if absent; that first-time dependency download requires connectivity. Once installed, application assets and SQLite work offline immediately.
 
 The package is unsigned: Windows may display an unknown-publisher/SmartScreen warning. Signing certificates, automatic updates, and release publication are outside this phase. CI builds artifacts but does not create a GitHub release.
 
@@ -74,6 +74,7 @@ Database version is independent of JSON schema version:
 | -------------- | ----------------------------------------------------------------------------------------------------- |
 | 1              | Workspace metadata and ordered projects, tasks, and activity tables; foreign keys and project indexes |
 | 2              | Transactional recovery snapshots for replacement imports                                              |
+| 3              | Independent companion preferences, window state, selection, and focus deadline                        |
 
 `PRAGMA application_id`, `user_version`, and `schema_migrations` identify the database and migration history. Migrations run in a transaction. Unknown/future versions, unrelated databases, and unreadable data produce an error rather than initialization over existing data. No down-migrations or destructive reset path is implemented.
 
@@ -83,9 +84,9 @@ The existing interface returns the complete workspace. Phase 2 stores entities i
 
 ## Desktop security and app lifecycle
 
-Only the local main window is granted the six workspace/backup commands. No remote web origins, generic SQL command, frontend filesystem API, shell execution, or updater is enabled. Native export chooses its own path through a user-visible dialog. A production CSP restricts scripts and connections; inline styles remain allowed for the existing charts and design tokens.
+The local main window has workspace, backup, and companion commands. The companion has workspace read/write and desktop controls, but no backup/file commands. Both windows can listen for native changes; narrowly scoped window visibility/focus queries support native UI verification. No remote web origins, generic SQL command, frontend filesystem API, shell execution, or updater is enabled. Native export chooses its own path through a user-visible dialog. A production CSP restricts scripts and connections; inline styles remain allowed for the existing charts and design tokens.
 
-The production app is single-instance: launching it again focuses the existing window. Closing the window exits normally; there is no background tray process. Production builds bundle local assets in `dist-desktop` and do not register a service worker. Browser builds keep their existing PWA/offline behavior in `dist`.
+The production app is single-instance: launching it again shows and focuses the existing main window. Closing the main window hides it to the tray by default; Settings can change this to quit. Closing the companion hides only the companion. **Quit FlowPlan** exits all windows and releases its shortcut. See the [companion guide](companion.md) for lifecycle and timer behavior. Production builds bundle local assets in `dist-desktop` and do not register a service worker. Browser builds keep their existing PWA/offline behavior in `dist`.
 
 Tauri's native file drag handler is disabled because it intercepts WebView2 HTML drag events on Windows. This preserves the existing Kanban card drag-and-drop; backup imports continue to use the file chooser.
 
@@ -105,6 +106,7 @@ npx playwright install chromium
 npm run test:e2e
 npm run desktop:build:test
 npm run test:desktop
+npm run test:companion
 npm run desktop:build
 ```
 
@@ -118,4 +120,4 @@ npm run test:installed -- "$env:LOCALAPPDATA\FlowPlan Personal\flowplan-personal
 
 This test reads the real desktop database without editing records. It checks the production data path, single-instance behavior, offline reload, and restart. Normal initialization or schema migrations may occur when the app opens. Both native scripts temporarily enable a localhost WebView2 debugging port for automation; ordinary application launches do not enable it.
 
-See [Phase 2 verification](phase-2-verification.md) for observed results and limitations.
+See [Phase 2 verification](phase-2-verification.md) for the original storage checks and [Phase 3 verification](phase-3-verification.md) for companion and upgrade results.

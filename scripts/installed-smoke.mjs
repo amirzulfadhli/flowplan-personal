@@ -40,7 +40,7 @@ async function open() {
   await page.getByRole('navigation', { name: 'Main navigation' }).waitFor()
   const info = await page.evaluate(() => window.__TAURI_INTERNALS__.invoke('storage_info'))
   assert.ok(!info.path.toLowerCase().startsWith(root.toLowerCase()))
-  assert.equal(info.databaseVersion, 2)
+  assert.equal(info.databaseVersion, 3)
   report.database = info
   return page
 }

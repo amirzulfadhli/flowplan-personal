@@ -4,7 +4,9 @@ A compact, local-first workspace for an individual developer’s projects, tasks
 
 ## Windows desktop
 
-Phase 2 adds SQLite persistence, transactional migrations, native backup export, safe browser-to-desktop migration, automatic recovery copies before replacement imports, and a per-user NSIS installer. The browser version remains supported.
+Phase 3 adds a system tray and an expandable floating companion for project capture, current tasks, progress, and focus sessions. SQLite persistence, native backups, browser-to-desktop migration, and the browser version remain supported.
+
+Press **Control+Shift+Space** for Quick Add. Closing the main window keeps FlowPlan in the tray by default; use **Quit FlowPlan** to exit. Settings lets you disable close-to-tray, choose a shortcut, and keep the widget above other windows. See the [companion guide](docs/companion.md).
 
 ```powershell
 npm ci
@@ -49,9 +51,10 @@ Visit `http://127.0.0.1:4173` once online and wait for the offline-ready message
 - Project workspaces with overview, tasks, explicitly saved notes, and isolated activity timelines.
 - Local display name above Settings in the sidebar; global workspace search with Ctrl/Cmd+K.
 - IndexedDB persistence, cross-tab refresh, JSON export, validated and confirmed JSON replacement imports, visible storage error states, and production offline caching.
-- Windows SQLite storage with two versioned migrations, revision-checked writes, native JSON Save dialog, and recovery-copy review/restore. Existing browser backups can be imported without altering their source.
+- Windows SQLite storage with three versioned migrations, revision-checked writes, native JSON Save dialog, and recovery-copy review/restore. Existing browser backups can be imported without altering their source.
+- Windows tray, draggable floating island, expandable project/task companion, configurable global Quick Add shortcut, and a focus timer that survives hiding and restarts.
 
-The profile is a local display name, not an account. No telemetry, external font requests, AI, native tray, floating companion, collaboration, or authentication is included.
+The profile is a local display name, not an account. No telemetry, external font requests, AI, collaboration, or authentication is included.
 
 ## Verify
 
@@ -75,6 +78,7 @@ Tests cover commands, validation, completion dates, scoped activity, date bounda
 src/
   domain/       Typed schema, pure commands, local dates, progress selectors
   storage/      Repository contract, IndexedDB/SQLite adapters and runtime selection
+  desktop/      Companion UI, native bridge, desktop preferences and timer display
   state/        Persistence lifecycle and cross-tab notifications
   components/   Shared cards, dialogs, project cards, task controls and editors
   pages/        Home, projects, project detail, tasks, board, calendar, insights, settings
@@ -99,8 +103,8 @@ design/reference/ Original approved HTML reference
 - This is optimized for personal workspaces, not very large datasets. Lists are not virtualized, and the v1 adapter rewrites one validated workspace snapshot per transaction.
 - Automated browser verification targets Chromium. Native verification targets Windows x64 WebView2. Firefox, Safari, macOS/Linux desktop packaging, and real device touch testing are not claimed.
 
-See [architecture decisions](docs/architecture.md), [design mapping](docs/design.md), [Phase 1 verification](docs/verification.md), and [Phase 2 desktop guide](docs/desktop.md).
+See [architecture decisions](docs/architecture.md), [design mapping](docs/design.md), [desktop guide](docs/desktop.md), and [Phase 3 verification](docs/phase-3-verification.md).
 
 ## Future phases
 
-Floating widgets, a system-tray companion, AI assistants, collaboration, and cloud sync remain deferred. Signing and a controlled installer upgrade rollout should precede public desktop distribution.
+AI assistants, collaboration, and cloud sync remain deferred. Signing and a controlled installer upgrade rollout should precede public desktop distribution.

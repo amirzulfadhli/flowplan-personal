@@ -67,7 +67,7 @@ fn creates_migrates_and_reopens_without_losing_data() {
     );
 }
 #[test]
-fn migrates_v1_to_v2_preserving_existing_rows() {
+fn migrates_v1_to_latest_preserving_existing_rows() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("old.sqlite3");
     {
@@ -95,6 +95,23 @@ fn migrates_v1_to_v2_preserving_existing_rows() {
     assert_eq!(db.read().unwrap().revision, 7);
     assert_eq!(db.read().unwrap().projects, fixture().projects);
     assert!(db.recovery_list().unwrap().is_empty());
+}
+
+#[test]
+fn phase_two_upgrade_keeps_workspace_and_recovery() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("phase2.sqlite3");
+    let mut db = Database::open(&path).unwrap();
+    db.commit(0, &fixture(), true).unwrap();
+    db.connection.execute_batch("DROP TABLE desktop_companion; DELETE FROM schema_migrations WHERE version = 3; PRAGMA user_version = 2;").unwrap();
+    drop(db);
+    let mut reopened = Database::open(&path).unwrap();
+    assert_eq!(reopened.read().unwrap(), fixture());
+    assert_eq!(reopened.recovery_list().unwrap().len(), 1);
+    assert_eq!(
+        reopened.companion_read().unwrap(),
+        crate::companion_state::Companion::default()
+    );
 }
 #[test]
 fn refuses_unknown_future_database_without_resetting_it() {

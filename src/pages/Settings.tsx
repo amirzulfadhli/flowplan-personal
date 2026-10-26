@@ -4,6 +4,7 @@ import { useWorkspace } from '../state/WorkspaceContext'
 import { parseImport, type Workspace } from '../domain/model'
 import { dateKey } from '../domain/dates'
 import { Card, Modal, PageHeader } from '../components/ui'
+import DesktopPreferences from '../desktop/DesktopPreferences'
 import {
   desktopInfo,
   exportDesktopBackup,
@@ -118,6 +119,7 @@ export default function Settings() {
     <>
       <PageHeader title="Settings" description="Your workspace, your data, your control." />
       <div className="settings-grid">
+        {desktop && <DesktopPreferences />}
         <Card
           title="Personal profile"
           description="A local display name. No sign-in or online account."
@@ -229,7 +231,10 @@ export default function Settings() {
             </div>
           )}
         </Card>
-        <Card title="About FlowPlan Personal" description="Phase 2 · Windows desktop and browser.">
+        <Card
+          title="About FlowPlan Personal"
+          description="Phase 3 · Desktop companion and browser."
+        >
           <p className="note">
             Built for individual projects, with no backend, authentication, or synchronization. The
             Windows app uses Tauri 2 and SQLite. Browser workspaces continue to use IndexedDB.

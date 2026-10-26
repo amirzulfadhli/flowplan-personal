@@ -1,7 +1,7 @@
 {
   "name": "flowplan-personal",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "engines": {
     "node": ">=22.12.0"
@@ -25,6 +25,7 @@
     "desktop:build:test": "tauri build --debug --no-bundle --features desktop-test -- --locked",
     "test:database": "cargo test --manifest-path src-tauri/Cargo.toml --lib --locked",
     "test:desktop": "node scripts/desktop-smoke.mjs",
+    "test:companion": "node scripts/companion-smoke.mjs",
     "test:installed": "node scripts/installed-smoke.mjs"
   },
   "dependencies": {

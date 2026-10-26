@@ -1,0 +1,345 @@
+html:has(.companion-root),
+body:has(.companion-root) {
+  background: transparent;
+  overflow: hidden;
+}
+.companion-root {
+  background: transparent;
+  padding: 6px;
+  width: 100vw;
+  height: 100vh;
+  color-scheme: dark;
+}
+.island {
+  --island-muted: #a6a9b9;
+  color: #f4f4fa;
+  background: #20222c;
+  border: 1px solid #3a3d4e;
+  box-shadow: 0 2px 5px #0005;
+  font-size: 12px;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+.island button,
+.island input,
+.island select {
+  font: inherit;
+}
+.island button {
+  cursor: pointer;
+}
+.island button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+.island button:focus-visible,
+.island select:focus-visible,
+.island input:focus-visible {
+  outline: 2px solid #a8a3ff;
+  outline-offset: 2px;
+}
+.island.collapsed {
+  border-radius: 26px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 10px 4px 4px;
+}
+.island-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #c1c3d1;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+}
+.island-icon:hover {
+  background: #ffffff10;
+  color: white;
+}
+.island .drag-handle {
+  width: 18px;
+  cursor: grab;
+  color: #83879b;
+  touch-action: none;
+}
+.island-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: #7777e8;
+  border-radius: 8px;
+  font-weight: 800;
+  flex-shrink: 0;
+  color: white;
+}
+.island-summary {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  border: 0;
+  padding: 0;
+  line-height: 1.3;
+}
+.island-summary span,
+.island-summary strong {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.island-summary span {
+  color: #b1b4c6;
+  font-size: 10px;
+}
+.island-summary strong {
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.island.expanded {
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+}
+.island-header {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  padding: 12px 10px 10px 8px;
+  border-bottom: 1px solid #ffffff0c;
+}
+.island-header > strong {
+  font-size: 12px;
+  white-space: nowrap;
+}
+.island-header > strong span {
+  color: var(--island-muted);
+  font-size: 10px;
+  font-weight: 400;
+  display: block;
+}
+.island-tools {
+  display: flex;
+  gap: 1px;
+  margin-left: auto;
+}
+.island-tools .selected {
+  color: #b3acff;
+  background: #8778ff24;
+}
+.island-body {
+  padding: 12px 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+.island-label,
+.island-section-label {
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.09em;
+  color: var(--island-muted);
+}
+.island-label {
+  display: grid;
+  gap: 5px;
+}
+.island select,
+.island input {
+  color: #ececf6;
+  background: #2b2e3a;
+  border: 1px solid #424655;
+  border-radius: 8px;
+  min-width: 0;
+  padding: 8px 9px;
+  width: 100%;
+  letter-spacing: normal;
+  font-weight: 450;
+}
+.island select {
+  cursor: pointer;
+}
+.island-capture {
+  display: flex;
+  margin-top: 10px;
+  gap: 7px;
+}
+.island-capture input {
+  background: #252733;
+}
+.island-capture input::placeholder {
+  color: #9296ad;
+}
+.island-capture button {
+  width: 34px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #8a80ed;
+  color: white;
+  border: none;
+}
+.island-current {
+  margin-top: 18px;
+}
+.island-section-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.island-section-label > span + span {
+  letter-spacing: normal;
+  font-size: 10px;
+  font-weight: 400;
+}
+.island-task {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 7px;
+}
+.island-task select {
+  border-color: transparent;
+  background: transparent;
+  padding-left: 0;
+  font-weight: 600;
+}
+.island .complete-task {
+  border: 1px solid #60637c;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+}
+.island-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+.island-progress .pbar {
+  flex: 1;
+  background: #3c3f50;
+  height: 4px;
+}
+.island-progress > span {
+  font-size: 10px;
+  color: var(--island-muted);
+  white-space: nowrap;
+}
+.island-empty {
+  color: var(--island-muted);
+  font-size: 11px;
+  padding: 12px 0 3px;
+}
+.island-focus {
+  background: #292b38;
+  border: 1px solid #3d3e51;
+  border-radius: 13px;
+  padding: 12px;
+  margin-top: 18px;
+}
+.island-focus.finished {
+  border-color: #6dc3a4;
+}
+.duration-control select {
+  padding: 3px;
+  border: 0;
+  background: transparent;
+  width: 67px;
+  font-size: 10px;
+}
+.timer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+.timer-digits {
+  font-size: 33px;
+  line-height: 1.2;
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1.5px;
+}
+.timer-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.timer-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #a39bf4;
+  color: #1e183d;
+  border: 0;
+  border-radius: 8px;
+  font-weight: 650 !important;
+  padding: 8px;
+}
+.timer-note {
+  color: var(--island-muted);
+  font-size: 9px;
+  margin: 8px 0 0;
+  line-height: 1.5;
+}
+.island-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 13px;
+  font-size: 9px;
+  color: var(--island-muted);
+}
+.island-footer button {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: transparent;
+  color: #bbb5ff;
+  border: 0;
+  padding: 0;
+  font-size: 10px;
+}
+.island-error {
+  font-size: 10px;
+  color: #ffb4b4;
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+}
+.island-loading {
+  border-radius: 20px;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+}
+.companion-root .startup {
+  padding: 12px;
+  background: #20222c;
+  color: white;
+  border-radius: 20px;
+  min-height: 0;
+  height: 100%;
+  font-size: 10px;
+  overflow: auto;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .island button {
+    transition: background 0.12s ease;
+  }
+}

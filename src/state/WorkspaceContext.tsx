@@ -12,6 +12,7 @@ import type { Workspace } from '../domain/model'
 import type { WorkspaceRepository } from '../storage/repository'
 import { createRepository } from '../storage/factory'
 import { isDesktop } from '../storage/desktop'
+import { listen } from '@tauri-apps/api/event'
 
 const defaultRepository = createRepository()
 function readFailure(error: unknown) {
@@ -61,7 +62,20 @@ export function WorkspaceProvider({
       .catch((error) => {
         if (active) setError(readFailure(error))
       })
-    if (typeof BroadcastChannel !== 'undefined') {
+    const nativeListener = isDesktop()
+      ? listen('workspace-changed', () => {
+          if (active) void reload()
+        })
+      : null
+    if (nativeListener)
+      void nativeListener
+        .then(() => {
+          if (active) void reload()
+        })
+        .catch((error) => {
+          if (active) setError(readFailure(error))
+        })
+    if (!isDesktop() && typeof BroadcastChannel !== 'undefined') {
       channel.current = new BroadcastChannel('flowplan-changes')
       channel.current.onmessage = () => {
         void reload()
@@ -74,6 +88,7 @@ export function WorkspaceProvider({
     return () => {
       active = false
       channel.current?.close()
+      if (nativeListener) void nativeListener.then((stop) => stop()).catch(() => undefined)
       window.removeEventListener('focus', focus)
     }
   }, [reload, repository, accept])

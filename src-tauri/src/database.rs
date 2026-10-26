@@ -9,8 +9,9 @@ use std::{
 };
 
 const APPLICATION_ID: i64 = 0x46504C4E;
-pub const DATABASE_VERSION: i64 = 2;
+pub const DATABASE_VERSION: i64 = 3;
 const MIGRATIONS: &[(i64, &str, &str)] = &[
+    // Shipped migrations are immutable; append new versions at the end.
     (
         1,
         "workspace",
@@ -20,6 +21,11 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         2,
         "recovery",
         include_str!("../migrations/002_recovery.sql"),
+    ),
+    (
+        3,
+        "companion",
+        include_str!("../migrations/003_companion.sql"),
     ),
 ];
 

@@ -1,12 +1,12 @@
 # Architecture decisions
 
-This document records the Phase 1 foundation. [Phase 2 desktop architecture](desktop.md) adds a Tauri 2 shell and SQLite adapter behind the same repository contract, with independent database migrations and transactional recovery copies. Browser behavior remains supported.
+This document records the Phase 1 foundation. [Desktop architecture](desktop.md) adds a Tauri 2 shell and SQLite adapter behind the same repository contract, with independent database migrations and transactional recovery copies. [Phase 3 companion architecture](companion.md) adds native lifecycle controls, a second window, and separately versioned companion state. Browser behavior remains supported.
 
 ## 1. React, TypeScript, and Vite
 
 React components own presentation and temporary form state. TypeScript checks domain and UI boundaries. Dependencies are pinned and the npm lockfile is committed. The selected Vite toolchain supports the installed Node 22.15 runtime; Vite’s documented baseline is Node 20.19+ or 22.12+ ([official guide](https://vite.dev/guide/)). This project requires Node 22.12+.
 
-Hash routing works without server rewrite configuration and remains compatible with future desktop asset serving. Only analytics is lazy-loaded because Recharts is the main optional screen dependency. The service worker precaches both bundles for offline routing.
+Hash routing works without server rewrite configuration and supports desktop asset serving. Analytics is lazy-loaded because Recharts is the main optional screen dependency; the desktop companion also has a separate lazy-loaded entry. The browser service worker precaches shipped bundles for offline routing.
 
 ## 2. Design tokens and reusable components
 
@@ -53,4 +53,4 @@ These are current-state completion statistics, not event-sourced audit history. 
 
 `vite-plugin-pwa` generates a production precache manifest for all shipped assets. First-visit caching needs a network connection (or a reachable localhost server); subsequent loads work offline at the same origin. Updates use an explicit reload prompt to protect unsaved forms. There are no runtime data API calls, authentication tokens, or backend services.
 
-Phase 2 implements Tauri and SQLite while preserving the v1 JSON contract. Native tray/island, AI integration, and synchronization remain future work. See the desktop guide for the storage boundary, revision checks, migration procedure, and native lifecycle.
+Phase 2 implements Tauri and SQLite while preserving the v1 JSON contract. Phase 3 adds the native tray/island and cross-window notifications. AI integration and synchronization remain future work. See the desktop and companion guides for storage boundaries, revision checks, migration procedures, and native lifecycle.

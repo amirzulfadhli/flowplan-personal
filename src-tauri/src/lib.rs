@@ -1,3 +1,5 @@
+mod companion;
+pub mod companion_state;
 pub mod database;
 #[cfg(test)]
 mod database_tests;
@@ -7,7 +9,7 @@ use database::{Database, Recovery, StoreError};
 use model::Workspace;
 use serde::Serialize;
 use std::path::PathBuf;
-use tauri::{Manager, State};
+use tauri::{Emitter, Manager, State};
 use tauri_plugin_dialog::DialogExt;
 
 pub struct DatabasePath(PathBuf);
@@ -23,14 +25,17 @@ async fn read_workspace(state: State<'_, DatabasePath>) -> Result<Workspace, Sto
 }
 #[tauri::command]
 async fn commit_workspace(
+    app: tauri::AppHandle,
     state: State<'_, DatabasePath>,
     expected_revision: u64,
     workspace: Workspace,
     replacement: bool,
 ) -> Result<Workspace, StoreError> {
-    state
+    let saved = state
         .open()?
-        .commit(expected_revision, &workspace, replacement)
+        .commit(expected_revision, &workspace, replacement)?;
+    let _ = app.emit("workspace-changed", saved.revision);
+    Ok(saved)
 }
 #[tauri::command]
 async fn list_recovery(state: State<'_, DatabasePath>) -> Result<Vec<Recovery>, StoreError> {
@@ -83,13 +88,12 @@ async fn export_backup(
 }
 
 pub fn run() {
-    let builder = tauri::Builder::default().plugin(tauri_plugin_dialog::init());
+    let builder = tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build());
     #[cfg(not(feature = "desktop-test"))]
     let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _, _| {
-        if let Some(window) = app.get_webview_window("main") {
-            let _ = window.unminimize();
-            let _ = window.set_focus();
-        }
+        let _ = companion::show_main(app);
     }));
     builder
         .setup(|app| {
@@ -99,7 +103,21 @@ pub fn run() {
                 .map(PathBuf::from)
                 .unwrap_or(directory);
             app.manage(DatabasePath(directory.join("flowplan.sqlite3")));
+            companion::setup(app.handle())?;
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                companion::dispatch(
+                    window.app_handle(),
+                    if window.label() == "companion" {
+                        "hide"
+                    } else {
+                        "closeMain"
+                    },
+                );
+            }
         })
         .invoke_handler(tauri::generate_handler![
             read_workspace,
@@ -107,7 +125,10 @@ pub fn run() {
             export_backup,
             storage_info,
             list_recovery,
-            read_recovery
+            read_recovery,
+            companion::companion_read,
+            companion::companion_update,
+            companion::desktop_action
         ])
         .run(tauri::generate_context!())
         .expect("FlowPlan could not start its desktop window");

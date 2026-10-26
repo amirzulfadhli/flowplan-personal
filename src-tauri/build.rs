@@ -7,6 +7,9 @@ fn main() {
             "storage_info",
             "list_recovery",
             "read_recovery",
+            "companion_read",
+            "companion_update",
+            "desktop_action",
         ]),
     ))
     .expect("Failed to prepare Tauri desktop resources");
