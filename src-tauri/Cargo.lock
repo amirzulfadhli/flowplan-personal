@@ -1011,6 +1011,7 @@ dependencies = [
  "tauri-plugin-single-instance",
  "tempfile",
  "tokio",
+ "windows",
 ]
 
 [[package]]

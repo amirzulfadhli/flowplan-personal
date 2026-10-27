@@ -5,6 +5,7 @@ pub mod database;
 #[cfg(test)]
 mod database_tests;
 pub mod model;
+mod passive_window;
 
 use database::{Database, Recovery, StoreError};
 use model::Workspace;
@@ -89,6 +90,20 @@ async fn export_backup(
 }
 
 pub fn run() {
+    let context = tauri::generate_context!();
+    // Elevated CI hosts ignore WebView2 environment overrides. Apply these through
+    // the API only in explicitly enabled test builds; release builds never do this.
+    #[cfg(feature = "desktop-test")]
+    let context = {
+        let mut context = context;
+        for window in &mut context.config_mut().app.windows {
+            window.additional_browser_args =
+                std::env::var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS").ok();
+            window.data_directory =
+                std::env::var_os("WEBVIEW2_USER_DATA_FOLDER").map(PathBuf::from);
+        }
+        context
+    };
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build());
@@ -135,6 +150,6 @@ pub fn run() {
             ai::ai_cancel,
             ai::ai_request
         ])
-        .run(tauri::generate_context!())
+        .run(context)
         .expect("FlowPlan could not start its desktop window");
 }

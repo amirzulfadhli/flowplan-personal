@@ -110,7 +110,7 @@ fn widget(app: &tauri::AppHandle, state: &Companion) -> Result<WebviewWindow, St
         return Ok(w);
     }
     let (width, height) = dimensions(state.expanded);
-    let w = WebviewWindowBuilder::new(
+    let builder = WebviewWindowBuilder::new(
         app,
         "companion",
         WebviewUrl::App("index.html?companion=1".into()),
@@ -125,9 +125,20 @@ fn widget(app: &tauri::AppHandle, state: &Companion) -> Result<WebviewWindow, St
     .always_on_top(state.always_on_top)
     .visible(false)
     .focused(false)
-    .disable_drag_drop_handler()
-    .build()
-    .map_err(native)?;
+    .disable_drag_drop_handler();
+    // Match the main test window's environment even on elevated CI runners.
+    #[cfg(feature = "desktop-test")]
+    let builder = {
+        let mut builder = builder;
+        if let Ok(args) = std::env::var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS") {
+            builder = builder.additional_browser_args(&args);
+        }
+        if let Some(path) = std::env::var_os("WEBVIEW2_USER_DATA_FOLDER") {
+            builder = builder.data_directory(path.into());
+        }
+        builder
+    };
+    let w = builder.build().map_err(native)?;
     if let Some((x, y)) = state.position {
         w.set_position(PhysicalPosition::new(x, y))
             .map_err(native)?;
@@ -160,6 +171,7 @@ pub fn show_main(app: &tauri::AppHandle) -> Result<(), StoreError> {
     }
     Ok(())
 }
+
 fn parse_shortcut(value: &str) -> Result<Option<Shortcut>, StoreError> {
     if value.is_empty() {
         return Ok(None);
@@ -267,7 +279,7 @@ pub async fn companion_update(
         *runtime.shortcut_error.lock().map_err(native)? = None;
     }
     if let Some(w) = app.get_webview_window("companion") {
-        w.set_always_on_top(next.always_on_top).map_err(native)?;
+        crate::passive_window::pin(&w, next.always_on_top)?;
     }
     announce(&app, next.clone());
     Ok(view(&app, next))
@@ -346,7 +358,7 @@ pub fn action(app: &tauri::AppHandle, action: &str) -> Result<(), StoreError> {
         let (width, height) = dimensions(next.expanded);
         w.set_size(LogicalSize::new(width, height))
             .map_err(native)?;
-        w.set_always_on_top(next.always_on_top).map_err(native)?;
+        crate::passive_window::pin(&w, next.always_on_top)?;
         if action == "resetPosition" {
             if let Some(monitor) = w.primary_monitor().map_err(native)? {
                 let area = monitor.work_area();
@@ -358,14 +370,11 @@ pub fn action(app: &tauri::AppHandle, action: &str) -> Result<(), StoreError> {
             }
         }
         clamp_window(&w)?;
-        w.show().map_err(native)?;
-        if action == "quickAdd" {
-            w.set_focus().map_err(native)?;
-        }
+        crate::passive_window::visibility(&w, true, action == "quickAdd" || action == "expand")?;
         let p = w.outer_position().map_err(native)?;
         next.position = Some((p.x, p.y));
     } else if let Some(w) = app.get_webview_window("companion") {
-        w.hide().map_err(native)?;
+        crate::passive_window::visibility(&w, false, false)?;
     }
     db.companion_save(&current, &mut next)?;
     announce(app, next);

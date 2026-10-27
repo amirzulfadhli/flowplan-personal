@@ -1,6 +1,7 @@
 // Real two-window WebView2 + Rust + SQLite verification. All writes use an isolated profile.
 import { chromium, expect } from '@playwright/test'
-import { spawn } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
+import { promisify } from 'node:util'
 import { once } from 'node:events'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
@@ -12,6 +13,23 @@ await mkdir(root, { recursive: true })
 const report = { root, checks: [], errors: [] }
 let app, browser, blocker, blockerBrowser
 const endpoint = 'http://127.0.0.1:9229'
+async function foregroundWindow() {
+  // Read the actual Windows foreground HWND. WebView2/Tauri focus caches can
+  // disagree during startup, and CDP document focus is not OS activation.
+  const { stdout } = await promisify(execFile)(
+    'powershell.exe',
+    [
+      '-NoProfile',
+      '-NonInteractive',
+      '-Command',
+      `Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public static class FlowPlanFocusProbe { [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow(); [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId); }'; $window = [FlowPlanFocusProbe]::GetForegroundWindow(); $ownerId = [uint32]0; [void][FlowPlanFocusProbe]::GetWindowThreadProcessId($window, [ref]$ownerId); $owner = Get-Process -Id $ownerId; @{ hwnd=$window.ToInt64().ToString(); process=$owner.ProcessName; title=$owner.MainWindowTitle } | ConvertTo-Json -Compress`,
+    ],
+    { windowsHide: true },
+  )
+  const foreground = JSON.parse(stdout.trim())
+  assert.match(foreground.hwnd, /^[1-9][0-9]*$/, 'Windows must have an active foreground window')
+  return foreground
+}
 async function launch() {
   app = spawn(resolve('src-tauri/target/debug/flowplan-personal.exe'), [], {
     windowsHide: true,
@@ -20,7 +38,7 @@ async function launch() {
   })
   app.stderr.on('data', (data) => process.stderr.write(data))
   await waitForDesktop(app, endpoint)
-  browser = await chromium.connectOverCDP(endpoint)
+  browser = await chromium.connectOverCDP(endpoint, { noDefaults: true })
   browser
     .contexts()[0]
     .on('page', (page) => page.on('pageerror', (error) => report.errors.push(error.message)))
@@ -71,16 +89,20 @@ try {
   await main.getByRole('button', { name: 'Create your first project' }).click()
   await main.getByLabel('Project name', { exact: true }).fill('Companion verification')
   await main.getByRole('button', { name: 'Create project', exact: true }).click()
+  await action(main, 'open')
+  const foregroundBeforeShow = await foregroundWindow()
   await action(main, 'show')
   let widget = await companion()
   await widget.getByRole('button', { name: 'Expand companion' }).waitFor()
+  const foregroundAfterShow = await foregroundWindow()
+  report.foreground = { before: foregroundBeforeShow, after: foregroundAfterShow }
   assert.equal(
-    await invoke(main, 'plugin:window|is_focused', { label: 'companion' }),
-    false,
-    'Passive show must not activate the native companion window',
+    foregroundAfterShow.hwnd,
+    foregroundBeforeShow.hwnd,
+    'Passive show must preserve the actual Windows foreground window',
   )
   await widget.screenshot({ path: resolve(root, 'collapsed.png') })
-  report.checks.push('Collapsed island opens without stealing main window focus')
+  report.checks.push('Collapsed island opens without changing the Windows foreground window')
   await action(main, 'quickAdd')
   await expect(widget.getByLabel('Quick task', { exact: true })).toBeFocused()
   await widget.getByLabel('Quick task', { exact: true }).fill('Captured from the island')
@@ -96,6 +118,15 @@ try {
   report.checks.push(
     'Quick Add focuses capture; task creation and completion synchronize in both directions',
   )
+
+  await action(main, 'hide')
+  await action(main, 'open')
+  const beforeExpandedShow = await foregroundWindow()
+  await action(main, 'show')
+  assert.equal((await foregroundWindow()).hwnd, beforeExpandedShow.hwnd)
+  await widget.getByLabel('Quick task', { exact: true }).click()
+  await expect(widget.getByLabel('Quick task', { exact: true })).toBeFocused()
+  report.checks.push('Expanded passive show preserves OS focus and capture remains interactive')
 
   await main.getByRole('button', { name: 'Project', exact: true }).click()
   await main.getByLabel('Project name', { exact: true }).fill('Second project')
@@ -133,7 +164,7 @@ try {
     }
     await new Promise((resolve) => setTimeout(resolve, 100))
   }
-  blockerBrowser = await chromium.connectOverCDP('http://127.0.0.1:9230')
+  blockerBrowser = await chromium.connectOverCDP('http://127.0.0.1:9230', { noDefaults: true })
   const blockerPage = blockerBrowser.contexts()[0].pages()[0]
   await blockerPage.getByRole('navigation', { name: 'Main navigation' }).waitFor()
   const blockerState = await state(blockerPage)
