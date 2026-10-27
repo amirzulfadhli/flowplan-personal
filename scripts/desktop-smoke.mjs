@@ -179,7 +179,16 @@ try {
   assert.deepEqual(await inspectNative(reopened), stored)
   report.checks.push('Invalid native import leaves saved workspace unchanged')
   await restoreViaUI(reopened, exported)
-  await reopened.getByLabel('Recovery copy').selectOption({ index: 1 })
+  // Import completion precedes the asynchronous recovery-list refresh. Select
+  // the snapshot of the revision we saved, never an index from a stale list.
+  const recoverySelect = reopened.getByLabel('Recovery copy')
+  const expectedCopy = recoverySelect.getByRole('option', {
+    name: new RegExp(`revision ${stored.revision}$`),
+  })
+  await expectedCopy.waitFor({ state: 'attached' })
+  const recoveryValue = await expectedCopy.getAttribute('value')
+  assert.ok(recoveryValue)
+  await recoverySelect.selectOption(recoveryValue)
   await reopened.getByRole('button', { name: 'Review recovery copy' }).click()
   await reopened.getByRole('checkbox', { name: 'I have a backup' }).check()
   await reopened.getByRole('button', { name: 'Replace workspace', exact: true }).click()

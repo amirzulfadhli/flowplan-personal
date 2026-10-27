@@ -10,7 +10,7 @@ Base: `feat/phase-3-companion` at `2fe38fc`. Implementation branch: `feat/phase-
 - The existing native desktop smoke test passed all eight storage, browser migration, backup/recovery, offline, and workflow checks.
 - The new native AI smoke test passed all eight checks using a real WebView2 window, Rust IPC/HTTP, and isolated SQLite. It covered opt-in/no automatic network, context isolation, no inference-side writes, atomic approval, cancelled review, stale approval, malformed/foreign proposals, HTTP failure recovery, cancellation disconnect, blocked redirects/cloud aliases/remote URLs, denied companion AI capability, and restart persistence.
 - All ten native companion checks passed, including explicit Quick Add focus, collapsed and expanded passive-show focus preservation, shortcut conflicts, task synchronization, pinning, timer behavior, and restart persistence.
-- TypeScript, ESLint, Prettier, Rust formatting, and diff whitespace checks passed. Browser/PWA and desktop production assets built successfully. The Windows release build produced the 0.4.0 x64 NSIS installer (3.44 MiB).
+- TypeScript, ESLint, Prettier, Rust formatting, and diff whitespace checks passed. Browser/PWA and desktop production assets built successfully. The final Windows release build produced the 0.4.0 x64 NSIS installer (3.45 MiB), including the native focus fix; all four installed-app checks and the database comparison passed again.
 - Installed 0.4.0 over 0.3.0 and passed all four installed-app checks: production database selection, single instance, offline assets/SQLite, and identical workspace after restart. A consistent SQLite backup was taken first; every workspace, recovery, and companion row remained identical afterward. SQLite integrity and foreign-key checks passed; database version remains 3.
 - Visually inspected the project AI panel in WebView2 at Windows 125% scaling; shared form styling was restored and no horizontal overflow was present.
 
@@ -30,6 +30,6 @@ Stronger foreground-window checks also reproduced a passive-show activation bug:
 
 ## Remaining verification
 
-The follow-up remote CI result is reported with delivery. Local packaging and installation have passed; hosted Windows verification is not claimed until the corrected run completes.
+The follow-up run [40466690844](https://github.com/amirzulfadhli/flowplan-personal/actions/runs/40466690844) confirmed the elevated-runner fix: WebView2 connected and migration, persistence, restart, and invalid-import checks passed. It then exposed a recovery-test race: index-based selection could choose an older snapshot before the asynchronous list refresh. The test now waits for the option identifying the expected source revision and selects that exact snapshot, preserving all restore assertions. The subsequent remote CI result is reported with delivery. Local packaging and installation have passed; hosted Windows verification is not claimed until the corrected run completes.
 
 See [project AI setup and architecture](project-ai.md) and [Windows commands](desktop.md). The package remains unsigned; clean-machine installation, physical power loss, multi-monitor/sleep behavior, real-model compatibility, and model quality are outside the checks completed so far.
