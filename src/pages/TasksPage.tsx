@@ -38,7 +38,7 @@ export default function TasksPage() {
         </div>
         <span className="subtle">{tasks.length} tasks</span>
       </div>
-      <TaskList tasks={sortedTasks(tasks)} />
+      <TaskList key={JSON.stringify([filters, soon])} tasks={sortedTasks(tasks)} />
     </>
   )
 }

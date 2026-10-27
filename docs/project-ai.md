@@ -43,4 +43,6 @@ Cancellation disconnects FlowPlan and discards the result; Ollama may take a sho
 
 Tests use a deterministic loopback Ollama protocol fixture, explicitly isolated from personal data. They establish transport, privacy, approval, cancellation, and persistence behavior; they do not measure real model reasoning quality. See [Phase 4 verification](phase-4-verification.md).
 
+Phase 5 also tested the actual local `qwen3:1.7b` model on CPU with synthetic projects. After prompt refinement it produced accepted advice and task breakdowns, and approval/cancellation checks passed. One priorities explanation still misstated a task status. Treat this small model as experimental and review the stored facts and proposed fields; see [actual-model results and timings](phase-5-verification.md). `npm run audit:local-model` repeats that opt-in audit against an already installed model and never downloads one.
+
 Protocol references: [Ollama chat API](https://docs.ollama.com/api/chat), [model listing](https://docs.ollama.com/api/tags), and [upstream OpenAPI model metadata](https://github.com/ollama/ollama/blob/main/docs/openapi.yaml).

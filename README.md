@@ -8,6 +8,8 @@ Phase 3 adds a system tray and an expandable floating companion for project capt
 
 Phase 4 adds an optional **AI** tab inside each project using a local Ollama model. It supports summaries, priorities, blockers, and task breakdowns; proposed task changes require explicit review and approval. No AI request runs automatically. See the [project AI guide](docs/project-ai.md) for local-only setup, privacy boundaries, and supported models.
 
+Phase 5 hardens concurrent notes editing, bounds task-list rendering, and keeps browser writes within the portable backup limit. The [beta verification record](docs/phase-5-verification.md) includes actual local-model results, performance observations, and remaining Windows release gates.
+
 Press **Control+Shift+Space** for Quick Add. Closing the main window keeps FlowPlan in the tray by default; use **Quit FlowPlan** to exit. Settings lets you disable close-to-tray, choose a shortcut, and keep the widget above other windows. See the [companion guide](docs/companion.md).
 
 ```powershell

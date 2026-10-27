@@ -27,7 +27,10 @@
     "test:desktop": "node scripts/desktop-smoke.mjs",
     "test:companion": "node scripts/companion-smoke.mjs",
     "test:ai": "node scripts/ai-smoke.mjs",
-    "test:installed": "node scripts/installed-smoke.mjs"
+    "test:installed": "node scripts/installed-smoke.mjs",
+    "audit:ui": "node scripts/beta-ui-audit.mjs",
+    "audit:local-model": "node scripts/local-model-audit.mjs",
+    "audit:desktop-performance": "node scripts/desktop-performance.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "2.12.4",

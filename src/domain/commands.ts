@@ -7,7 +7,7 @@ export type Command =
   | { type: 'deleteProject'; id: string }
   | { type: 'saveTask'; id?: string; input: TaskInput }
   | { type: 'deleteTask'; id: string }
-  | { type: 'notes'; id: string; notes: string }
+  | { type: 'notes'; id: string; notes: string; expectedNotes?: string }
   | { type: 'profile'; name: string }
   | { type: 'import'; data: Workspace; expectedRevision?: number }
 
@@ -90,6 +90,10 @@ export function applyCommand(
   if (command.type === 'notes') {
     const project = data.projects.find((p) => p.id === command.id)
     if (!project) throw new Error('This project no longer exists.')
+    if (command.expectedNotes !== undefined && project.notes !== command.expectedNotes)
+      throw new Error(
+        'These notes changed in another window. Review the latest notes before saving.',
+      )
     if (project.notes !== command.notes) {
       project.notes = command.notes
       project.updatedAt = now

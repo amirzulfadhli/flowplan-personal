@@ -1,6 +1,6 @@
 import { openDB, type IDBPDatabase } from 'idb'
 import { applyCommand, type Command } from '../domain/commands'
-import { emptyWorkspace, workspaceSchema, type Workspace } from '../domain/model'
+import { emptyWorkspace, serializeBackup, workspaceSchema, type Workspace } from '../domain/model'
 
 export interface WorkspaceRepository {
   read(): Promise<Workspace>
@@ -41,6 +41,7 @@ export class IndexedDBRepository implements WorkspaceRepository {
       const stored: unknown = await tx.store.get('current')
       const current = stored === undefined ? emptyWorkspace() : workspaceSchema.parse(stored)
       const next = applyCommand(current, command)
+      serializeBackup(next)
       await tx.store.put(next, 'current')
       await tx.done
       return next

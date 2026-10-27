@@ -24,6 +24,27 @@ function bridge(initial = emptyWorkspace()) {
   return { call, read: () => data }
 }
 describe('desktop repository boundary', () => {
+  it('does not rebase a stale note over a concurrent SQLite commit', async () => {
+    let data = fixture()
+    let commits = 0
+    const id = data.projects[0].id
+    const call: NativeInvoke = async <T>(command: string) => {
+      if (command === 'read_workspace') return structuredClone(data) as T
+      commits++
+      data = applyCommand(data, { type: 'notes', id, notes: 'Concurrent SQLite note' })
+      throw { code: 'CONFLICT', message: 'Changed' }
+    }
+    await expect(
+      new SQLiteRepository(call).execute({
+        type: 'notes',
+        id,
+        notes: 'Old draft',
+        expectedNotes: '',
+      }),
+    ).rejects.toThrow('changed in another window')
+    expect(data.projects[0].notes).toBe('Concurrent SQLite note')
+    expect(commits).toBe(1)
+  })
   it('selects IndexedDB in browsers and SQLite only with a native bridge', () => {
     expect(createRepository()).toBeInstanceOf(IndexedDBRepository)
     Object.defineProperty(window, '__TAURI_INTERNALS__', { value: {}, configurable: true })

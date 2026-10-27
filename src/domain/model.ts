@@ -92,3 +92,11 @@ export function parseImport(text: string): Workspace {
     throw new Error('This is not a valid FlowPlan v1 backup. No data has been changed.')
   return parsed.data
 }
+
+/** Compact UTF-8 matches the native backup limit and keeps every new write restorable. */
+export function serializeBackup(data: Workspace): string {
+  const text = JSON.stringify(data)
+  if (new TextEncoder().encode(text).length > 20 * 1024 * 1024)
+    throw new Error('The workspace exceeds the 20 MB backup limit. No changes were saved.')
+  return text
+}

@@ -324,6 +324,37 @@ try {
   report.checks.push(
     'Close-to-tray retains the process; idle hidden companion makes no persisted changes; reset position stays inside the work area',
   )
+  // Run the artificial lifecycle test last: CDP leaves visibility hidden after resume.
+  await widget.getByRole('button', { name: 'Start focus' }).click()
+  // Suspend only this test renderer, never the user's Windows session or system clock.
+  const deadlineBeforeFreeze = (await state(main)).endsAt
+  const frozenDisplay = await widget.getByLabel('Time remaining', { exact: true }).textContent()
+  const suspension = await widget.context().newCDPSession(widget)
+  await suspension.send('Page.setWebLifecycleState', { state: 'frozen' })
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 6500))
+  } finally {
+    await suspension.send('Page.setWebLifecycleState', { state: 'active' })
+  }
+  const seconds = (text) =>
+    text.split(':').reduce((minutes, part) => minutes * 60 + Number(part), 0)
+  await expect
+    .poll(
+      async () =>
+        seconds(frozenDisplay) -
+        seconds(await widget.getByLabel('Time remaining', { exact: true }).textContent()),
+      { timeout: 5000 },
+    )
+    .toBeGreaterThanOrEqual(6)
+  assert.equal((await state(main)).endsAt, deadlineBeforeFreeze)
+  report.rendererResume = await widget.evaluate(() => ({
+    visibility: document.visibilityState,
+    focused: document.hasFocus(),
+  }))
+  await suspension.detach()
+  report.checks.push(
+    'Renderer suspension/resume catches up from the persisted deadline without shifting it (not a physical Windows sleep test)',
+  )
   await action(main, 'quit').catch(() => undefined)
   await expect.poll(() => app.exitCode, { timeout: 10000 }).not.toBe(null)
   report.checks.push('Explicit Quit exits the native process')
