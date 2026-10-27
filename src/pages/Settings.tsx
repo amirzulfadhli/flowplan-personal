@@ -233,7 +233,7 @@ export default function Settings() {
         </Card>
         <Card
           title="About FlowPlan Personal"
-          description="Phase 3 · Desktop companion and browser."
+          description="Phase 4 · Optional project AI, desktop companion, and browser."
         >
           <p className="note">
             Built for individual projects, with no backend, authentication, or synchronization. The

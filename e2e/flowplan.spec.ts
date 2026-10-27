@@ -82,6 +82,84 @@ async function addTask(page: Page, title: string) {
   await dialog.getByRole('button', { name: 'Add task', exact: true }).click()
   await expect(dialog).not.toBeVisible()
 }
+test('project AI is opt-in, scoped, reviewable, and persists only approved browser tasks', async ({
+  page,
+}) => {
+  const data = demoFixture()
+  const projectId = data.projects[0].id
+  const calls: string[] = []
+  await page.route('http://127.0.0.1:11434/api/**', async (route) => {
+    const path = new URL(route.request().url()).pathname
+    calls.push(path)
+    const headers = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'content-type',
+    }
+    if (route.request().method() === 'OPTIONS') {
+      await route.fulfill({ status: 204, headers })
+      return
+    }
+    let json: unknown
+    if (path === '/api/tags')
+      json = {
+        models: [
+          { name: 'local-test:latest', size: 100, digest: 'test', details: { format: 'gguf' } },
+        ],
+      }
+    else if (path === '/api/show') json = { model_info: {}, capabilities: ['completion'] }
+    else {
+      const body = route.request().postDataJSON()
+      expect(body.messages[1].content).toContain(projectId)
+      expect(body.messages[1].content).not.toContain(data.projects[1].id)
+      expect(body.messages[1].content).not.toContain(data.projects[2].name)
+      json = {
+        done: true,
+        message: {
+          content: JSON.stringify({
+            summary: 'Browser project advice',
+            reasoningSummary: 'Based on the selected project.',
+            actions: [
+              {
+                kind: 'create',
+                taskId: null,
+                title: 'Approved browser AI task',
+                description: 'Local test suggestion',
+                due: '',
+                status: 'todo',
+                priority: 'Medium',
+                reason: 'A suggested next step',
+              },
+            ],
+          }),
+        },
+      }
+    }
+    await route.fulfill({ headers, json })
+  })
+  await importBackup(page, data)
+  await page.goto(`/#/projects/${projectId}`)
+  await page.getByRole('tab', { name: 'AI', exact: true }).click()
+  await expect(page.getByLabel('Enable local AI for this project')).not.toBeChecked()
+  expect(calls).toHaveLength(0)
+  await page.getByLabel('Enable local AI for this project').check()
+  await page.getByRole('button', { name: 'Find local models' }).click()
+  await expect(page.getByLabel('Local model')).toHaveValue('local-test:latest')
+  await page.getByRole('button', { name: 'Generate suggestions' }).click()
+  await expect(page.getByText('Browser project advice', { exact: true })).toBeVisible()
+  await page.getByLabel('Create: Approved browser AI task').check()
+  await page.getByRole('button', { name: 'Review 1 selected action(s)' }).click()
+  await page.getByRole('button', { name: 'Approve and save selected actions' }).click()
+  await expect(page.getByText('Approved actions saved to this project.')).toBeVisible()
+  await page.reload()
+  await page.getByRole('tab', { name: 'Tasks', exact: false }).click()
+  await expect(
+    page.getByRole('button', { name: 'Approved browser AI task', exact: true }),
+  ).toBeVisible()
+  await page.goto(`/#/projects/${data.projects[1].id}`)
+  await page.getByRole('tab', { name: 'AI', exact: true }).click()
+  await expect(page.getByLabel('Enable local AI for this project')).not.toBeChecked()
+  await expect(page.getByText('Browser project advice', { exact: true })).toHaveCount(0)
+})
 test('creates, edits, moves, completes, persists, and deletes real work', async ({ page }) => {
   await createProject(page, 'My first project')
   await page.goto('/#/tasks')

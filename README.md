@@ -6,6 +6,8 @@ A compact, local-first workspace for an individual developer’s projects, tasks
 
 Phase 3 adds a system tray and an expandable floating companion for project capture, current tasks, progress, and focus sessions. SQLite persistence, native backups, browser-to-desktop migration, and the browser version remain supported.
 
+Phase 4 adds an optional **AI** tab inside each project using a local Ollama model. It supports summaries, priorities, blockers, and task breakdowns; proposed task changes require explicit review and approval. No AI request runs automatically. See the [project AI guide](docs/project-ai.md) for local-only setup, privacy boundaries, and supported models.
+
 Press **Control+Shift+Space** for Quick Add. Closing the main window keeps FlowPlan in the tray by default; use **Quit FlowPlan** to exit. Settings lets you disable close-to-tray, choose a shortcut, and keep the widget above other windows. See the [companion guide](docs/companion.md).
 
 ```powershell
@@ -54,7 +56,7 @@ Visit `http://127.0.0.1:4173` once online and wait for the offline-ready message
 - Windows SQLite storage with three versioned migrations, revision-checked writes, native JSON Save dialog, and recovery-copy review/restore. Existing browser backups can be imported without altering their source.
 - Windows tray, draggable floating island, expandable project/task companion, configurable global Quick Add shortcut, and a focus timer that survives hiding and restarts.
 
-The profile is a local display name, not an account. No telemetry, external font requests, AI, collaboration, or authentication is included.
+The profile is a local display name, not an account. No telemetry, external font requests, cloud AI provider, collaboration, or authentication is included.
 
 ## Verify
 
@@ -79,6 +81,7 @@ src/
   domain/       Typed schema, pure commands, local dates, progress selectors
   storage/      Repository contract, IndexedDB/SQLite adapters and runtime selection
   desktop/      Companion UI, native bridge, desktop preferences and timer display
+  ai/           Project assistant, local transport, scoped context and reviewed proposals
   state/        Persistence lifecycle and cross-tab notifications
   components/   Shared cards, dialogs, project cards, task controls and editors
   pages/        Home, projects, project detail, tasks, board, calendar, insights, settings
@@ -103,8 +106,8 @@ design/reference/ Original approved HTML reference
 - This is optimized for personal workspaces, not very large datasets. Lists are not virtualized, and the v1 adapter rewrites one validated workspace snapshot per transaction.
 - Automated browser verification targets Chromium. Native verification targets Windows x64 WebView2. Firefox, Safari, macOS/Linux desktop packaging, and real device touch testing are not claimed.
 
-See [architecture decisions](docs/architecture.md), [design mapping](docs/design.md), [desktop guide](docs/desktop.md), and [Phase 3 verification](docs/phase-3-verification.md).
+See [architecture decisions](docs/architecture.md), [design mapping](docs/design.md), [desktop guide](docs/desktop.md), and [Phase 4 verification](docs/phase-4-verification.md).
 
 ## Future phases
 
-AI assistants, collaboration, and cloud sync remain deferred. Signing and a controlled installer upgrade rollout should precede public desktop distribution.
+Collaboration and cloud sync remain deferred. Signing and a controlled installer upgrade rollout should precede public desktop distribution.

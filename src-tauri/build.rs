@@ -10,6 +10,9 @@ fn main() {
             "companion_read",
             "companion_update",
             "desktop_action",
+            "ai_begin",
+            "ai_cancel",
+            "ai_request",
         ]),
     ))
     .expect("Failed to prepare Tauri desktop resources");

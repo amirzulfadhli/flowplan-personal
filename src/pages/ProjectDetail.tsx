@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { lazy, Suspense, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowUpRight, Pencil } from 'lucide-react'
 import { useWorkspace } from '../state/WorkspaceContext'
@@ -8,6 +8,7 @@ import { AddTask, TaskList, TaskRow } from '../components/Tasks'
 import { progress, sortedTasks } from '../domain/selectors'
 import { displayDate } from '../domain/dates'
 import type { Project } from '../domain/model'
+const ProjectAssistant = lazy(() => import('../ai/ProjectAssistant'))
 
 export default function ProjectDetail() {
   const { id } = useParams()
@@ -79,7 +80,7 @@ function ProjectWorkspace({ project }: { project: Project }) {
         <span className="subtle">Deadline: {displayDate(project.due)}</span>
       </div>
       <div className="tabs" role="tablist" aria-label="Project sections">
-        {['Overview', 'Tasks', 'Notes', 'Activity'].map((name) => (
+        {['Overview', 'Tasks', 'Notes', 'Activity', 'AI'].map((name) => (
           <button
             role="tab"
             aria-selected={tab === name}
@@ -95,6 +96,11 @@ function ProjectWorkspace({ project }: { project: Project }) {
         ))}
       </div>
       <div id="project-panel" role="tabpanel" aria-labelledby={`tab-${tab}`}>
+        {tab === 'AI' && (
+          <Suspense fallback={<p role="status">Opening project AI…</p>}>
+            <ProjectAssistant key={project.id} projectId={project.id} />
+          </Suspense>
+        )}
         {tab === 'Overview' && (
           <div className="homegrid">
             <div className="verticalgap">

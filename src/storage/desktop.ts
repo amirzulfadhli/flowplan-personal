@@ -45,6 +45,11 @@ export class SQLiteRepository implements WorkspaceRepository {
         )
       } catch (error) {
         if (isNativeError(error) && error.code === 'CONFLICT') {
+          if (command.type === 'approveAiActions')
+            throw new Error(
+              'The workspace changed. Generate and review fresh AI suggestions before approving.',
+              { cause: error },
+            )
           // Replacement must never rebase itself over data the user has not reviewed.
           if (command.type === 'import')
             throw new Error('The workspace changed. Cancel and review the import again.', {

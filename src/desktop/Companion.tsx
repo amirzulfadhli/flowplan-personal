@@ -25,6 +25,8 @@ export default function Companion() {
   const [now, setNow] = useState(Date.now)
   const [message, setMessage] = useState('')
   const input = useRef<HTMLInputElement>(null)
+  const [captureRequest, setCaptureRequest] = useState(0)
+  const handledCapture = useRef(0)
   const active = !!state?.visible && state.endsAt !== null
   useEffect(() => {
     if (!active) return
@@ -43,7 +45,8 @@ export default function Companion() {
   }, [active, state?.endsAt])
   useEffect(() => {
     const listener = listen('companion-capture', () => {
-      input.current?.focus()
+      // The native event may arrive before React mounts the expanded input.
+      setCaptureRequest((value) => value + 1)
     })
     return () => {
       void listener.then((stop) => stop()).catch(() => undefined)
@@ -51,6 +54,11 @@ export default function Companion() {
   }, [])
   useEffect(() => {
     let active = true
+    if (state?.expanded && state.visible && captureRequest > handledCapture.current) {
+      input.current?.focus()
+      handledCapture.current = captureRequest
+      return
+    }
     if (state?.expanded)
       void getCurrentWindow()
         .isFocused()
@@ -61,7 +69,7 @@ export default function Companion() {
     return () => {
       active = false
     }
-  }, [state?.expanded])
+  }, [state?.expanded, state?.visible, captureRequest])
   const project = data.projects.find((p) => p.id === state?.projectId) ?? data.projects[0]
   const tasks = data.tasks.filter((t) => t.projectId === project?.id)
   const openTasks = tasks.filter((t) => t.status !== 'done')

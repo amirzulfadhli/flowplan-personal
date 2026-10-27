@@ -5,6 +5,7 @@ import { once } from 'node:events'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import assert from 'node:assert/strict'
+import { desktopEnvironment, waitForDesktop } from './native-test-utils.mjs'
 
 const root = resolve('desktop-test-results', `smoke-${Date.now()}`)
 await mkdir(root, { recursive: true })
@@ -30,16 +31,11 @@ async function waitForUrl(url) {
 async function startDesktop() {
   desktop = spawn(executable, [], {
     windowsHide: true,
-    env: {
-      ...process.env,
-      FLOWPLAN_TEST_DATA_DIR: resolve(root, 'data'),
-      WEBVIEW2_USER_DATA_FOLDER: resolve(root, 'webview'),
-      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${debugPort} --remote-debugging-address=127.0.0.1`,
-    },
+    env: desktopEnvironment(root, debugPort),
     stdio: ['ignore', 'pipe', 'pipe'],
   })
   desktop.stderr.on('data', (chunk) => process.stderr.write(chunk))
-  await waitForUrl(`${endpoint}/json/version`)
+  await waitForDesktop(desktop, endpoint)
   connection = await chromium.connectOverCDP(endpoint)
   const page =
     connection.contexts()[0].pages()[0] ?? (await connection.contexts()[0].waitForEvent('page'))

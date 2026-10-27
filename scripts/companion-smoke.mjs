@@ -5,6 +5,7 @@ import { once } from 'node:events'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import assert from 'node:assert/strict'
+import { desktopEnvironment, waitForDesktop } from './native-test-utils.mjs'
 
 const root = resolve('desktop-test-results', `companion-${Date.now()}`)
 await mkdir(root, { recursive: true })
@@ -14,24 +15,11 @@ const endpoint = 'http://127.0.0.1:9229'
 async function launch() {
   app = spawn(resolve('src-tauri/target/debug/flowplan-personal.exe'), [], {
     windowsHide: true,
-    env: {
-      ...process.env,
-      FLOWPLAN_TEST_DATA_DIR: resolve(root, 'data'),
-      WEBVIEW2_USER_DATA_FOLDER: resolve(root, 'webview'),
-      WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS:
-        '--remote-debugging-port=9229 --remote-debugging-address=127.0.0.1',
-    },
+    env: desktopEnvironment(root, 9229),
     stdio: ['ignore', 'pipe', 'pipe'],
   })
   app.stderr.on('data', (data) => process.stderr.write(data))
-  for (let n = 0; n < 100; n++) {
-    try {
-      if ((await fetch(`${endpoint}/json/version`)).ok) break
-    } catch {
-      /* starting */
-    }
-    await new Promise((resolve) => setTimeout(resolve, 250))
-  }
+  await waitForDesktop(app, endpoint)
   browser = await chromium.connectOverCDP(endpoint)
   browser
     .contexts()[0]
@@ -313,6 +301,18 @@ try {
 } catch (error) {
   report.passed = false
   report.failure = error.stack ?? String(error)
+  report.focusDiagnostics = await Promise.all(
+    (browser?.contexts()[0]?.pages() ?? []).map(async (page) => ({
+      url: page.url(),
+      state: await page
+        .evaluate(() => ({
+          focused: document.hasFocus(),
+          active: document.activeElement?.tagName,
+          label: document.activeElement?.getAttribute('aria-label'),
+        }))
+        .catch(() => null),
+    })),
+  )
   process.exitCode = 1
   for (const page of browser?.contexts()[0]?.pages() ?? [])
     await page

@@ -1,6 +1,8 @@
 import { workspaceSchema, type ProjectInput, type TaskInput, type Workspace } from './model'
+import { proposalSchema, type Proposal } from '../ai/protocol'
 
 export type Command =
+  | { type: 'approveAiActions'; projectId: string; expectedRevision: number; actions: Proposal[] }
   | { type: 'saveProject'; id?: string; input: ProjectInput }
   | { type: 'deleteProject'; id: string }
   | { type: 'saveTask'; id?: string; input: TaskInput }
@@ -15,6 +17,42 @@ export function applyCommand(
   command: Command,
   now = new Date().toISOString(),
 ): Workspace {
+  if (command.type === 'approveAiActions') {
+    if (current.revision !== command.expectedRevision)
+      throw new Error(
+        'The workspace changed. Generate and review fresh AI suggestions before approving.',
+      )
+    if (
+      !current.projects.some((p) => p.id === command.projectId) ||
+      !command.actions.length ||
+      command.actions.length > 8
+    )
+      throw new Error('Choose 1 to 8 actions for an existing project.')
+    const seen = new Set<string>()
+    let next = current
+    for (const raw of command.actions) {
+      const action = proposalSchema.parse(raw)
+      if (action.kind === 'update') {
+        if (
+          !current.tasks.some((t) => t.id === action.taskId && t.projectId === command.projectId) ||
+          seen.has(action.taskId!)
+        )
+          throw new Error('AI actions must reference distinct tasks within this project.')
+        seen.add(action.taskId!)
+      }
+      const { title, description, status, priority, due } = action
+      next = applyCommand(
+        next,
+        {
+          type: 'saveTask',
+          id: action.taskId ?? undefined,
+          input: { projectId: command.projectId, title, description, status, priority, due },
+        },
+        now,
+      )
+    }
+    return workspaceSchema.parse({ ...next, revision: current.revision + 1 })
+  }
   const data = structuredClone(current)
   const log = (projectId: string, message: string) =>
     data.activity.unshift({ id: crypto.randomUUID(), projectId, message, time: now })

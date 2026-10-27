@@ -1,3 +1,4 @@
+mod ai;
 mod companion;
 pub mod companion_state;
 pub mod database;
@@ -103,6 +104,7 @@ pub fn run() {
                 .map(PathBuf::from)
                 .unwrap_or(directory);
             app.manage(DatabasePath(directory.join("flowplan.sqlite3")));
+            app.manage(ai::AiRuntime::default());
             companion::setup(app.handle())?;
             Ok(())
         })
@@ -128,7 +130,10 @@ pub fn run() {
             read_recovery,
             companion::companion_read,
             companion::companion_update,
-            companion::desktop_action
+            companion::desktop_action,
+            ai::ai_begin,
+            ai::ai_cancel,
+            ai::ai_request
         ])
         .run(tauri::generate_context!())
         .expect("FlowPlan could not start its desktop window");

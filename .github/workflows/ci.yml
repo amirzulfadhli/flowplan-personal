@@ -64,6 +64,8 @@ jobs:
           npm run test:desktop
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           npm run test:companion
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run test:ai
       - run: |
           . ./scripts/windows-env.ps1
           npm run desktop:build
