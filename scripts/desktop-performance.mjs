@@ -73,16 +73,30 @@ try {
       env: desktopEnvironment(root, 9236),
       stdio: 'ignore',
     })
+    const spawnedMs = performance.now() - start
     await waitForDesktop(app, 'http://127.0.0.1:9236')
+    const endpointMs = performance.now() - start
     browser = await chromium.connectOverCDP('http://127.0.0.1:9236', { noDefaults: true })
+    const connectedMs = performance.now() - start
     const main = browser
       .contexts()[0]
       .pages()
       .find((p) => !p.url().includes('companion=1'))
     await main.getByRole('navigation', { name: 'Main navigation' }).waitFor()
+    const readyMs = performance.now() - start
+    const databaseStart = performance.now()
+    await invoke(main, 'read_workspace')
+    const databaseRoundTripMs = performance.now() - databaseStart
     report.launches.push({
       profile: i === 0 ? 'fresh' : 'existing',
-      readyMs: Math.round(performance.now() - start),
+      readyMs: Math.round(readyMs),
+      spawnedMs: Math.round(spawnedMs),
+      endpointMs: Math.round(endpointMs),
+      connectedMs: Math.round(connectedMs),
+      databaseRoundTripMs: Math.round(databaseRoundTripMs),
+      navigation: await main.evaluate(() =>
+        performance.getEntriesByType('navigation')[0]?.toJSON(),
+      ),
     })
     assert.equal(
       (await invoke(main, 'storage_info')).path.toLowerCase(),
