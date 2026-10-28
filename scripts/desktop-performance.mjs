@@ -11,6 +11,11 @@ import { desktopEnvironment, waitForDesktop } from './native-test-utils.mjs'
 
 const root = resolve('desktop-test-results', `performance-${Date.now()}`)
 const production = process.env.FLOWPLAN_AUDIT_PRODUCTION === '1'
+const restartDelayMs = Number(process.env.FLOWPLAN_AUDIT_RESTART_DELAY_MS || 0)
+assert.ok(
+  Number.isInteger(restartDelayMs) && restartDelayMs >= 0 && restartDelayMs <= 60000,
+  'Restart delay must be an integer from 0 to 60000 milliseconds',
+)
 const binary = resolve(`src-tauri/target/${production ? 'release' : 'debug'}/flowplan-personal.exe`)
 const databasePath = production
   ? resolve(process.env.APPDATA, 'com.amirzulfadhli.flowplan-startup-audit/flowplan.sqlite3')
@@ -40,6 +45,7 @@ const report = {
     ? 'production profile, isolated audit identifier and CDP config'
     : 'debug desktop-test',
   restart: 'graceful Quit',
+  restartDelayMs,
   launches: [],
   idle: [],
 }
@@ -157,6 +163,7 @@ try {
     )
     if (i < 2) {
       await stop()
+      if (restartDelayMs) await new Promise((r) => setTimeout(r, restartDelayMs))
       continue
     }
     await invoke(main, 'desktop_action', { action: 'show' })

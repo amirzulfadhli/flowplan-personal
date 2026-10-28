@@ -10,6 +10,8 @@ Continued from `5d5691b` on `feat/phase-6-release-prep`, 28 October 2026. No mer
 - The final debug marker narrows the slow interval further: plugins were ready at 29/24 ms, but application setup began at 6,689/6,617 ms. Tauri 2.12.5 creates configured windows before calling application setup. This interval includes event-loop dispatch, native window/WebView2 construction, and asset setup; it is **not a pure WebView2 initialization measurement**. Pinpointing the internal wait still requires runtime/ETW profiling. No cache deletion, SQLite durability reduction, or speculative runtime flag was introduced.
 - The benchmark could reconnect to a previous process's still-closing CDP endpoint. It now waits for endpoint teardown between launches and records that wait separately. This corrects a measurement failure; it did not eliminate the slow debug reopen.
 
+- A targeted debug follow-up waited 10 seconds after each Quit. Reopens fell to 1,524/1,479 ms, versus 7,364/7,250 ms immediately. This supports teardown/profile-lifetime contention as a hypothesis, not a proven specific WebView2 lock or a product fix. The audit now exposes this interval through `FLOWPLAN_AUDIT_RESTART_DELAY_MS` (0–60,000 ms); no delay was added to the application.
+
 ## Measurements
 
 Same Windows host, 8 GB RAM, 125% display scale, no concurrent build or model inference during the final samples. Host build: 26200.9711 (25H2). Installed WebView2 directories: 155.0.4283.62 and 156.0.4314.50; the exact runtime selected for each sample was not captured, so these are not runtime-version-controlled benchmarks.
@@ -19,6 +21,8 @@ Same Windows host, 8 GB RAM, 125% display scale, no concurrent build or model in
 | Checkpoint debug, before optimization          |     2,248 ms | 2,046 ms | 7,190 ms |
 | Final debug desktop-test                       |     2,019 ms | 7,364 ms | 7,250 ms |
 | Optimized production profile, audit identifier |     1,992 ms | 1,493 ms | 1,208 ms |
+
+Delayed-debug follow-up: fresh launch 2,500 ms; reopens after 10 seconds 1,524 and 1,479 ms. Evidence: `desktop-test-results/performance-1793181845498/report.json`. The controlled waiting interval is outside the reported launch times. This follow-up used an ignored copy of the same harness with only the explicit wait inserted; the committed environment option reproduces it.
 
 Times are process launch through Playwright navigation visibility, including automation polling/attachment. Production used an existing, empty audit database; the historical report incorrectly labels its first launch fresh. The harness now checks database existence. Debug used a new empty database and WebView profile. Production had single-instance support enabled, an isolated application identifier, and environment-enabled CDP; debug additionally enables desktop-test/devtools and explicit WebView environment overrides. These differences prevent attributing the entire gap to compiler optimization. The production sample does not prove the intermittent delay is absent from normal distribution builds.
 
@@ -59,11 +63,11 @@ Normal package: `src-tauri/target/release/bundle/nsis/FlowPlan Personal_0.4.0_x6
 SHA-256: `8B87E5968F446532CD5924D63EAE37B1FC12D889C9CB99536CED88A3CAE5C897`.
 Built with `npm run desktop:build`, normal identifier `com.amirzulfadhli.flowplan-personal`, without desktop-test or configured debugging flags. The executable ProductName was verified as FlowPlan Personal after restoring the normal build. This unsigned local artifact is not a published release or an installed upgrade.
 
-Remaining gates: exact native/WebView wait root cause; uninstrumented production and delayed-reopen baseline; populated/long-duration resource measurements; physical tray/drag/focus/sleep-resume and multi-monitor/mixed-DPI tests; clean-account install with/without WebView2; actual installer upgrade and uninstall/reinstall retention; independent package/security acceptance. Suitable for supervised evaluation with backups, **not a fully qualified beta release**. AI remains optional and experimental; Phase 5 model findings are unchanged.
+Remaining gates: exact native/WebView wait root cause; uninstrumented production and repeated delayed-reopen baselines; populated/long-duration resource measurements; physical tray/drag/focus/sleep-resume and multi-monitor/mixed-DPI tests; clean-account install with/without WebView2; actual installer upgrade and uninstall/reinstall retention; independent package/security acceptance. Suitable for supervised evaluation with backups, **not a fully qualified beta release**. AI remains optional and experimental; Phase 5 model findings are unchanged.
 
 ## Reproduce safely
 
-Run the debug build and `npm run audit:desktop-performance` without concurrent builds/inference. For an isolated production audit:
+Run the debug build and `npm run audit:desktop-performance` without concurrent builds/inference. To compare delayed reopens, set `$env:FLOWPLAN_AUDIT_RESTART_DELAY_MS = '10000'`; remove that environment variable afterward. The default is immediate reopen after endpoint teardown. For an isolated production audit:
 
 ```powershell
 . ./scripts/windows-env.ps1
