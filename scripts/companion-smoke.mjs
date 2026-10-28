@@ -42,10 +42,25 @@ async function launch() {
   browser
     .contexts()[0]
     .on('page', (page) => page.on('pageerror', (error) => report.errors.push(error.message)))
-  const main = browser
-    .contexts()[0]
-    .pages()
-    .find((p) => !p.url().includes('companion=1'))
+  // On restart both windows can exist before either has navigated. A blank
+  // companion also satisfies !includes('companion=1'), so wait for a positive
+  // main-window URL before retaining a page reference.
+  let main
+  await expect
+    .poll(
+      () => {
+        main = browser
+          .contexts()[0]
+          .pages()
+          .find((page) => {
+            const url = new URL(page.url())
+            return url.hostname === 'tauri.localhost' && !url.searchParams.has('companion')
+          })
+        return Boolean(main)
+      },
+      { timeout: 30000 },
+    )
+    .toBe(true)
   main.on('pageerror', (error) => report.errors.push(error.message))
   await main.getByRole('navigation', { name: 'Main navigation' }).waitFor()
   const info = await invoke(main, 'storage_info')
