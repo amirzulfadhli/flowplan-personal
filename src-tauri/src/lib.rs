@@ -6,6 +6,7 @@ pub mod database;
 mod database_tests;
 pub mod model;
 mod passive_window;
+mod startup_trace;
 
 use database::{Database, Recovery, StoreError};
 use model::Workspace;
@@ -17,13 +18,19 @@ use tauri_plugin_dialog::DialogExt;
 pub struct DatabasePath(PathBuf);
 impl DatabasePath {
     fn open(&self) -> Result<Database, StoreError> {
-        Database::open(&self.0)
+        startup_trace::mark("database_open_begin");
+        let result = Database::open(&self.0);
+        startup_trace::mark("database_open_end");
+        result
     }
 }
 
 #[tauri::command]
 async fn read_workspace(state: State<'_, DatabasePath>) -> Result<Workspace, StoreError> {
-    state.open()?.read()
+    startup_trace::mark("workspace_read_begin");
+    let result = state.open()?.read();
+    startup_trace::mark("workspace_read_end");
+    result
 }
 #[tauri::command]
 async fn commit_workspace(
@@ -90,7 +97,9 @@ async fn export_backup(
 }
 
 pub fn run() {
+    startup_trace::mark("native_entry");
     let context = tauri::generate_context!();
+    startup_trace::mark("context_ready");
     // Elevated CI hosts ignore WebView2 environment overrides. Apply these through
     // the API only in explicitly enabled test builds; release builds never do this.
     #[cfg(feature = "desktop-test")]
@@ -112,7 +121,16 @@ pub fn run() {
         let _ = companion::show_main(app);
     }));
     builder
+        .plugin(
+            tauri::plugin::Builder::<tauri::Wry>::new("startup-diagnostics")
+                .setup(|_, _| {
+                    startup_trace::mark("plugins_ready");
+                    Ok(())
+                })
+                .build(),
+        )
         .setup(|app| {
+            startup_trace::mark("setup_enter");
             let directory = app.path().app_data_dir()?;
             #[cfg(feature = "desktop-test")]
             let directory = std::env::var_os("FLOWPLAN_TEST_DATA_DIR")
@@ -121,7 +139,14 @@ pub fn run() {
             app.manage(DatabasePath(directory.join("flowplan.sqlite3")));
             app.manage(ai::AiRuntime::default());
             companion::setup(app.handle())?;
+            startup_trace::mark("setup_complete");
             Ok(())
+        })
+        .on_page_load(|_, payload| {
+            startup_trace::mark(match payload.event() {
+                tauri::webview::PageLoadEvent::Started => "navigation_started",
+                tauri::webview::PageLoadEvent::Finished => "navigation_finished",
+            });
         })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

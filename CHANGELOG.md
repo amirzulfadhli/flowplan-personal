@@ -2,6 +2,10 @@
 
 ## Unreleased — beta preparation
 
+- Removed a duplicate initial desktop workspace read while preserving subscribe-before-read ordering and cross-window updates.
+- Added opt-in native/SQLite milestones and a React readiness mark; corrected stale debugging-endpoint attachment in the audit harness.
+- Compared debug and isolated production startup. Slow debug reopens remain unresolved; no end-to-end speedup is claimed.
+
 - Added separate startup benchmark milestones for process spawning, the WebView2 debugging endpoint, automation connection, navigation readiness, and a SQLite read round trip. These measurements must not be conflated with production UI readiness.
 - Added a beta acceptance checklist and installation/recovery instructions.
 

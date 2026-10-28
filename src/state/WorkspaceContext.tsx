@@ -39,6 +39,10 @@ export function WorkspaceProvider({
   const [error, setError] = useState('')
   const [pending, setPending] = useState(0)
   const channel = useRef<BroadcastChannel | null>(null)
+  useEffect(() => {
+    if (data && !performance.getEntriesByName('flowplan-workspace-ready').length)
+      performance.mark('flowplan-workspace-ready')
+  }, [data])
   const accept = useCallback(
     (next: Workspace) =>
       setData((previous) => (!previous || next.revision >= previous.revision ? next : previous)),
@@ -54,14 +58,17 @@ export function WorkspaceProvider({
   }, [repository, accept])
   useEffect(() => {
     let active = true
-    void repository
-      .read()
-      .then((next) => {
-        if (active) accept(next)
-      })
-      .catch((error) => {
-        if (active) setError(readFailure(error))
-      })
+    // Desktop reads after subscribing below, avoiding a duplicate startup snapshot
+    // while ensuring commits between subscription and the initial read are observed.
+    if (!isDesktop())
+      void repository
+        .read()
+        .then((next) => {
+          if (active) accept(next)
+        })
+        .catch((error) => {
+          if (active) setError(readFailure(error))
+        })
     const nativeListener = isDesktop()
       ? listen('workspace-changed', () => {
           if (active) void reload()

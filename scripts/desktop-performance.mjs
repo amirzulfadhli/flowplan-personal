@@ -1,19 +1,44 @@
 // Observational benchmark, not a hardware-independent pass/fail performance budget.
-// Uses only an isolated desktop-test profile. Run without concurrent model inference/builds.
+// Uses only isolated debug/test or production-audit profiles. Run without concurrent builds.
 import { chromium } from '@playwright/test'
 import { spawn, execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { once } from 'node:events'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, writeFile, readFile, access } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import assert from 'node:assert/strict'
 import { desktopEnvironment, waitForDesktop } from './native-test-utils.mjs'
 
 const root = resolve('desktop-test-results', `performance-${Date.now()}`)
+const production = process.env.FLOWPLAN_AUDIT_PRODUCTION === '1'
+const binary = resolve(`src-tauri/target/${production ? 'release' : 'debug'}/flowplan-personal.exe`)
+const databasePath = production
+  ? resolve(process.env.APPDATA, 'com.amirzulfadhli.flowplan-startup-audit/flowplan.sqlite3')
+  : resolve(root, 'data/flowplan.sqlite3')
+if (production) {
+  // Refuse the normal release executable before launching or invoking any IPC.
+  const { stdout } = await promisify(execFile)(
+    'powershell.exe',
+    [
+      '-NoProfile',
+      '-NonInteractive',
+      '-Command',
+      `(Get-Item -LiteralPath '${binary.replaceAll("'", "''")}').VersionInfo.ProductName`,
+    ],
+    { windowsHide: true },
+  )
+  assert.equal(
+    stdout.trim(),
+    'FlowPlan Startup Audit',
+    'Build the isolated audit configuration first',
+  )
+}
 await mkdir(root, { recursive: true })
 const report = {
   root,
-  build: 'debug desktop-test',
+  build: production
+    ? 'production profile, isolated audit identifier and CDP config'
+    : 'debug desktop-test',
   restart: 'graceful Quit',
   launches: [],
   idle: [],
@@ -64,13 +89,37 @@ async function stop() {
   await browser?.close().catch(() => undefined)
   browser = undefined
   app = undefined
+  // The host can exit before WebView2's debugging server. Never attach the next
+  // process's measurement to a stale endpoint from the previous process.
+  const teardownStart = performance.now()
+  for (let i = 0; i < 80; i++) {
+    try {
+      await fetch('http://127.0.0.1:9236/json/version', {
+        signal: AbortSignal.timeout(250),
+        headers: { Connection: 'close' },
+      })
+    } catch {
+      const last = report.launches.at(-1)
+      if (last) last.endpointTeardownMs = Math.round(performance.now() - teardownStart)
+      return
+    }
+    await new Promise((r) => setTimeout(r, 250))
+  }
+  throw new Error(
+    'Previous WebView2 endpoint did not stop; refusing a contaminated restart measurement',
+  )
 }
 try {
   for (let i = 0; i < 3; i++) {
+    const existing = await access(databasePath).then(
+      () => true,
+      () => false,
+    )
     const start = performance.now()
-    app = spawn(resolve('src-tauri/target/debug/flowplan-personal.exe'), [], {
+    const trace = resolve(root, `startup-${i}.tsv`)
+    app = spawn(binary, [], {
       windowsHide: true,
-      env: desktopEnvironment(root, 9236),
+      env: { ...desktopEnvironment(root, 9236), FLOWPLAN_STARTUP_TRACE: trace },
       stdio: 'ignore',
     })
     const spawnedMs = performance.now() - start
@@ -88,19 +137,23 @@ try {
     await invoke(main, 'read_workspace')
     const databaseRoundTripMs = performance.now() - databaseStart
     report.launches.push({
-      profile: i === 0 ? 'fresh' : 'existing',
+      profile: existing ? 'existing' : 'fresh',
       readyMs: Math.round(readyMs),
       spawnedMs: Math.round(spawnedMs),
       endpointMs: Math.round(endpointMs),
       connectedMs: Math.round(connectedMs),
       databaseRoundTripMs: Math.round(databaseRoundTripMs),
+      nativeTrace: await readFile(trace, 'utf8'),
+      reactReady: await main.evaluate(() =>
+        performance.getEntriesByName('flowplan-workspace-ready').map((e) => e.toJSON()),
+      ),
       navigation: await main.evaluate(() =>
         performance.getEntriesByType('navigation')[0]?.toJSON(),
       ),
     })
     assert.equal(
       (await invoke(main, 'storage_info')).path.toLowerCase(),
-      resolve(root, 'data/flowplan.sqlite3').toLowerCase(),
+      databasePath.toLowerCase(),
     )
     if (i < 2) {
       await stop()
@@ -164,7 +217,7 @@ try {
   }
   report.passed = true
 } catch (error) {
-  report.failure = String(error.stack || error)
+  report.failure = String(error.stack || JSON.stringify(error))
   report.passed = false
 } finally {
   await stop()
