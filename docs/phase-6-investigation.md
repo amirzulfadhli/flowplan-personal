@@ -84,3 +84,7 @@ The audit database is separate and retained between runs. The final command rest
 ## CI follow-up — 29 October 2026
 
 Browser CI passed at `e57ec3e`, but Windows run 40669527432 timed out selecting the main page after companion restart. The retained main-window screenshot shows the workspace and navigation fully loaded. The harness used a negative URL check that could select an `about:blank` companion before its navigation completed. It now waits for a positive main application URL before retaining the page. This is a test-selection fix, not an application startup optimization; no assertions or persistence checks were removed. All 11 companion checks passed locally afterward (`companion-1793205070196`). Final pushed-commit CI is reported with delivery.
+
+## Subsequent acceptance evidence
+
+See [the acceptance follow-up](phase-6-acceptance.md) for isolated installer replacement, uninstall/reinstall retention, normal production startup without CDP, and the populated 15-minute resource soak. It supersedes the outstanding status of those specific checks above; physical-device and clean-machine gates remain open.

@@ -2,6 +2,9 @@
 
 ## Unreleased — beta preparation
 
+- Serialized optional startup trace records to prevent concurrent IPC writes from corrupting diagnostic timestamps.
+- Added isolated installer replacement/retention and populated resource audit scripts; recorded normal production startup and a 15-minute soak without resetting personal data.
+
 - Removed a duplicate initial desktop workspace read while preserving subscribe-before-read ordering and cross-window updates.
 - Added opt-in native/SQLite milestones and a React readiness mark; corrected stale debugging-endpoint attachment in the audit harness.
 - Compared debug and isolated production startup. Slow debug reopens remain unresolved; no end-to-end speedup is claimed.
