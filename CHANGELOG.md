@@ -1,6 +1,16 @@
 # Changelog
 
-## Unreleased — beta preparation
+## 0.5.0-beta.1 — supervised candidate preparation (not released)
+
+- Versioned the Windows candidate consistently across npm, Cargo, and Tauri; retained the application identity and existing database/JSON schemas.
+- Added tester onboarding, private bug/feedback forms, a manual Windows acceptance sheet, and backup/recovery/rollback/uninstall guidance.
+- Added an opt-in, read-only diagnostic collector restricted to environment and installer metadata; no project content or automatic upload.
+- Recorded one successful isolated 0.4.1 → 0.5.0-beta.1 upgrade; the earlier unexplained installer failure remains unresolved, with no speculative installer fix.
+- Kept CI packaging verification while disabling installer artifact uploads. No tag, distribution, or public release accompanies this candidate.
+
+Known limits: clean Windows/missing-WebView2 execution, physical tray/shortcut/focus/dragging, sleep/resume, multi-monitor/DPI/taskbar configurations, detailed startup instrumentation, and overnight stability remain unverified. AI remains optional and experimental. See the [candidate record](docs/phase-7-beta-preparation.md).
+
+## Phase 6 — beta preparation (not released)
 
 - Added a compact empty-desktop getting-started guide for local backups, browser migration, close-to-tray, and explicit Quit.
 - Verified isolated increasing-version installer retention and extended the acceptance harness to resume longer resource measurements without repeating passed installation checks.

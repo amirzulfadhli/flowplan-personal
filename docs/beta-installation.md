@@ -1,5 +1,7 @@
 # Installing a limited beta candidate
 
+Current preparation candidate: **0.5.0-beta.1**. Start with the [tester onboarding guide](beta-tester-guide.md), [candidate identity/evidence](phase-7-beta-preparation.md), and [backup, rollback, uninstall, and recovery procedures](beta-recovery.md). Test sessions and installer delivery require separate authorization; this preparation distributes nothing.
+
 Only use an installer supplied with an exact commit and SHA-256. No release has been published by this preparation work. The current package is unsigned; do not disable Windows security protections to install it. If your environment blocks it, report the block or use an appropriately managed test machine.
 
 ## Before upgrading
@@ -27,4 +29,4 @@ Report the candidate commit/hash, Windows/WebView2 versions, display arrangement
 
 ## Acceptance scope
 
-The increasing-version upgrade was exercised with the separate **FlowPlan Beta Acceptance** identity (0.4.0 → 0.4.1) and synthetic data. Those installers are test artifacts, not beta downloads. The repository product version remains 0.4.0. Consult [the final gate review](phase-6-final-gates.md) before deciding whether a candidate is suitable for your test environment. Do not treat blocked physical/clean-machine checks as passed.
+Phase 6 exercised the separate **FlowPlan Beta Acceptance** identity (0.4.0 → 0.4.1) with synthetic data while its normal product remained 0.4.0. Phase 7 advances the normal candidate to 0.5.0-beta.1 and records a separate isolated upgrade. Acceptance-identity installers are test artifacts, never beta downloads. Consult the [Phase 6 final gate review](phase-6-final-gates.md) and [Phase 7 record](phase-7-beta-preparation.md). Do not treat blocked physical/clean-machine checks as passed.

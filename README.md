@@ -4,6 +4,8 @@ A compact, local-first workspace for an individual developer’s projects, tasks
 
 ## Windows desktop
 
+Phase 7 prepares **0.5.0-beta.1** for future supervised Windows testing; it is not a public release and no installer is distributed. Start with the [tester guide](docs/beta-tester-guide.md), [candidate evidence](docs/phase-7-beta-preparation.md), and [manual acceptance sheet](docs/beta-manual-acceptance.md). Phase 6 limitations remain open.
+
 Phase 3 adds a system tray and an expandable floating companion for project capture, current tasks, progress, and focus sessions. SQLite persistence, native backups, browser-to-desktop migration, and the browser version remain supported.
 
 Phase 4 adds an optional **AI** tab inside each project using a local Ollama model. It supports summaries, priorities, blockers, and task breakdowns; proposed task changes require explicit review and approval. No AI request runs automatically. See the [project AI guide](docs/project-ai.md) for local-only setup, privacy boundaries, and supported models.

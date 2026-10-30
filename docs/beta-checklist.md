@@ -2,6 +2,8 @@
 
 This is a preparation checklist, not a release announcement. Keep AI optional and experimental. Do not widen distribution until the unchecked gates have evidence.
 
+This checklist retains **Phase 6** evidence and open gates. Phase 7's candidate-specific identity and checks are in [its preparation record](phase-7-beta-preparation.md); human retests use the [manual acceptance sheet](beta-manual-acceptance.md). A new version does not clear the unchecked gates below.
+
 ## Candidate identity
 
 - [x] Record the exact source commit, installer SHA-256, Windows version, WebView2 version, and build configuration in the final gate review (runtime source `cab42bb`).

@@ -28,9 +28,9 @@ Build a Windows installer:
 npm run desktop:build
 ```
 
-Output: `src-tauri/target/release/bundle/nsis/FlowPlan Personal_0.4.0_x64-setup.exe`. The NSIS installer is per-user and does not require administrator installation. It can bootstrap WebView2 if absent; that first-time dependency download requires connectivity. Once installed, application assets and SQLite work offline immediately. Ollama is an optional, separately installed local service; core functionality does not require it.
+Output: `src-tauri/target/release/bundle/nsis/FlowPlan Personal_0.5.0-beta.1_x64-setup.exe`. The NSIS installer is per-user and does not require administrator installation. It can bootstrap WebView2 if absent; that first-time dependency download requires connectivity. Once installed, application assets and SQLite work offline immediately. Ollama is an optional, separately installed local service; core functionality does not require it.
 
-The package is unsigned: Windows may display an unknown-publisher/SmartScreen warning. Signing certificates, automatic updates, and release publication are outside this phase. CI builds artifacts but does not create a GitHub release.
+The package is unsigned: Windows may display an unknown-publisher/SmartScreen warning. Signing certificates, automatic updates, and release publication are outside this phase. Phase 7 CI validates packaging without uploading installers or creating a GitHub release. See the [supervised tester guide](beta-tester-guide.md) before any separately authorized testing.
 
 ## Data location and lifetime
 
