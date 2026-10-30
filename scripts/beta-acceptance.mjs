@@ -17,6 +17,12 @@ const database = resolve(
   'com.amirzulfadhli.flowplan-beta-acceptance/flowplan.sqlite3',
 )
 const endpoint = 'http://127.0.0.1:9241'
+const upgradeRetained = process.argv.includes('--upgrade-retained')
+const upgradeSoak = process.argv.includes('--upgrade-soak')
+const skipSoak = process.argv.includes('--skip-soak')
+const timerSoakOnly = process.argv.includes('--timer-soak-only')
+assert.ok(!timerSoakOnly || upgradeSoak, '--timer-soak-only requires --upgrade-soak')
+const reportFile = upgradeRetained || upgradeSoak ? 'increasing-version-report.json' : 'report.json'
 const phaseSeconds = Number(process.env.FLOWPLAN_SOAK_PHASE_SECONDS || 300)
 assert.ok(Number.isInteger(phaseSeconds) && phaseSeconds >= 60 && phaseSeconds <= 3600)
 const report = {
@@ -45,7 +51,7 @@ const ps = async (command) =>
     })
   ).stdout.trim()
 const quote = (value) => `'${value.replaceAll("'", "''")}'`
-const flush = () => writeFile(resolve(root, 'report.json'), JSON.stringify(report, null, 2))
+const flush = () => writeFile(resolve(root, reportFile), JSON.stringify(report, null, 2))
 const invoke = (page, command, args) =>
   page.evaluate(
     async ({ command, args }) => {
@@ -204,12 +210,20 @@ async function sample(mode) {
 }
 await mkdir(root, { recursive: true })
 const resumeEmpty = process.argv.includes('--resume-empty')
-const resumeSoak = process.argv.includes('--soak-only')
+const resumeSoak = process.argv.includes('--soak-only') || upgradeSoak
 let seeded
-if (resumeSoak) {
+if (upgradeRetained) {
+  assert.ok(!resumeSoak && !resumeEmpty, 'Choose one audit mode')
+  assert.ok(!(await exists(resolve(root, reportFile))), 'Preserve the previous upgrade report')
   const previous = JSON.parse(await readFile(resolve(root, 'report.json'), 'utf8'))
+  assert.equal(previous.passed, true, 'Finish the original isolated audit first')
+  seeded = JSON.parse(await readFile(resolve(root, 'external-backup.json'), 'utf8'))
+  assert.ok(await exists(database), 'Requires the retained synthetic acceptance profile')
+  assert.ok(!(await exists(binary)), 'Close/uninstall the previous audit installation first')
+} else if (resumeSoak) {
+  const previous = JSON.parse(await readFile(resolve(root, reportFile), 'utf8'))
   assert.equal(await hash(binary), previous.candidateBinaryHash)
-  assert.ok(previous.checks.length >= 3)
+  assert.ok(previous.checks.length >= (upgradeSoak ? 1 : 3))
   await writeFile(
     resolve(root, `before-soak-${Date.now()}.json`),
     JSON.stringify(previous, null, 2),
@@ -236,7 +250,29 @@ if (resumeSoak) {
   assert.ok(!(await exists(binary)), 'Acceptance installation already exists')
 }
 try {
-  if (!resumeSoak) {
+  if (upgradeRetained) {
+    await install('candidate-setup.exe')
+    const version = () => ps(`(Get-Item -LiteralPath ${quote(binary)}).VersionInfo.ProductVersion`)
+    report.previousVersion = await version()
+    assert.match(report.previousVersion, /^0\.4\.0(?:\.|$)/)
+    await open('Retained 0.4.0 baseline')
+    assert.deepEqual(await invoke(main, 'read_workspace'), seeded)
+    const expectedPreferences = await preferences()
+    report.expectedPreferences = expectedPreferences
+    await flush()
+    await close()
+    await install('candidate-setup-0.4.1.exe')
+    report.candidateVersion = await version()
+    assert.match(report.candidateVersion, /^0\.4\.1(?:\.|$)/)
+    report.candidateBinaryHash = await hash(binary)
+    await open('Increasing-version 0.4.1 upgrade')
+    assert.deepEqual(await invoke(main, 'read_workspace'), seeded)
+    assert.deepEqual(await preferences(), expectedPreferences)
+    report.checks.push(
+      'Real 0.4.0 to 0.4.1 installer upgrade retained all workspace fields and selected preferences',
+    )
+    await close()
+  } else if (!resumeSoak) {
     if (!resumeEmpty) await install('previous-setup.exe')
     report.previousBinaryHash = await hash(binary)
     await open('Phase 5 clean audit installation')
@@ -298,40 +334,47 @@ try {
       await close()
     }
   }
-  await open('Populated resource soak')
-  assert.deepEqual(await invoke(main, 'read_workspace'), seeded)
-  await invoke(main, 'desktop_action', { action: 'show' })
-  await main.goto('http://tauri.localhost/#/tasks')
-  await main.locator('main h1').waitFor()
-  await sleep(15000)
-  for (const mode of ['visible-idle', 'hidden-idle', 'hidden-timer']) {
-    if (mode === 'hidden-idle') {
-      await invoke(main, 'desktop_action', { action: 'closeMain' })
-      await invoke(main, 'desktop_action', { action: 'hide' })
-    }
-    if (mode === 'hidden-timer') {
-      await invoke(main, 'companion_update', {
-        update: { type: 'timer', action: 'duration', minutes: 5 },
-      })
-      await invoke(main, 'companion_update', { update: { type: 'timer', action: 'start' } })
-    }
-    const end = Date.now() + phaseSeconds * 1000
-    console.log(`Starting ${mode}: ${phaseSeconds}s`)
-    do {
-      await sample(mode)
-      await sleep(Math.min(10000, Math.max(0, end - Date.now())))
-    } while (Date.now() < end)
-    await sample(mode)
+  if (!skipSoak) {
+    await open('Populated resource soak')
     assert.deepEqual(await invoke(main, 'read_workspace'), seeded)
+    await invoke(main, 'desktop_action', { action: 'show' })
+    await main.goto('http://tauri.localhost/#/tasks')
+    await main.locator('main h1').waitFor()
+    await sleep(15000)
+    for (const mode of timerSoakOnly
+      ? ['hidden-timer']
+      : ['visible-idle', 'hidden-idle', 'hidden-timer']) {
+      if (mode !== 'visible-idle') {
+        await invoke(main, 'desktop_action', { action: 'closeMain' })
+        await invoke(main, 'desktop_action', { action: 'hide' })
+      }
+      if (mode === 'hidden-timer') {
+        await invoke(main, 'companion_update', {
+          update: { type: 'timer', action: 'duration', minutes: Math.ceil(phaseSeconds / 60) + 5 },
+        })
+        await invoke(main, 'companion_update', { update: { type: 'timer', action: 'start' } })
+      }
+      const end = Date.now() + phaseSeconds * 1000
+      console.log(`Starting ${mode}: ${phaseSeconds}s`)
+      do {
+        await sample(mode)
+        await sleep(Math.min(10000, Math.max(0, end - Date.now())))
+      } while (Date.now() < end)
+      await sample(mode)
+      assert.deepEqual(await invoke(main, 'read_workspace'), seeded)
+    }
+    assert.deepEqual(report.errors, [])
+    report.checks.push(
+      timerSoakOnly
+        ? 'Populated hidden-timer soak completed without workspace changes or renderer errors; earlier idle stages are in the archived report'
+        : 'Populated visible, hidden, and hidden-timer soak completed without workspace changes or renderer errors',
+    )
   }
-  assert.deepEqual(report.errors, [])
-  report.checks.push(
-    'Populated visible, hidden, and hidden-timer soak completed without workspace changes or renderer errors',
-  )
   report.passed = true
 } catch (error) {
   report.passed = false
   report.failure = error.stack || JSON.stringify(error)
+  report.failureDetails = { code: error.code, stdout: error.stdout, stderr: error.stderr }
   process.exitCode = 1
 } finally {
   await close().catch((error) => {

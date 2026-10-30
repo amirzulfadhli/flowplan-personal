@@ -2,6 +2,9 @@
 
 ## Unreleased — beta preparation
 
+- Added a compact empty-desktop getting-started guide for local backups, browser migration, close-to-tray, and explicit Quit.
+- Verified isolated increasing-version installer retention and extended the acceptance harness to resume longer resource measurements without repeating passed installation checks.
+
 - Serialized optional startup trace records to prevent concurrent IPC writes from corrupting diagnostic timestamps.
 - Added isolated installer replacement/retention and populated resource audit scripts; recorded normal production startup and a 15-minute soak without resetting personal data.
 
