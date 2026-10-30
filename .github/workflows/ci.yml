@@ -69,14 +69,15 @@ jobs:
       - run: |
           . ./scripts/windows-env.ps1
           npm run desktop:build
-      - uses: actions/upload-artifact@v4
-        with:
-          name: flowplan-windows-installer
-          path: src-tauri/target/release/bundle/nsis/*-setup.exe
-          retention-days: 7
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/check-beta-diagnostics.mjs "src-tauri/target/release/bundle/nsis/FlowPlan Personal_0.5.0-beta.1_x64-setup.exe"
+      # Supervised beta preparation: validate packaging without uploading installers.
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: desktop-verification
-          path: desktop-test-results/
+          path: |
+            desktop-test-results/
+            !desktop-test-results/**/*.exe
+            !desktop-test-results/**/*.msi
           retention-days: 7

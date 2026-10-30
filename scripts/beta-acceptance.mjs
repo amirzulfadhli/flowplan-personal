@@ -20,9 +20,18 @@ const endpoint = 'http://127.0.0.1:9241'
 const upgradeRetained = process.argv.includes('--upgrade-retained')
 const upgradeSoak = process.argv.includes('--upgrade-soak')
 const skipSoak = process.argv.includes('--skip-soak')
+const phase7Upgrade = process.argv.includes('--phase7-upgrade')
+assert.ok(
+  !phase7Upgrade || (skipSoak && !upgradeRetained && !upgradeSoak),
+  'Phase 7 upgrade requires --skip-soak and no other upgrade mode',
+)
 const timerSoakOnly = process.argv.includes('--timer-soak-only')
 assert.ok(!timerSoakOnly || upgradeSoak, '--timer-soak-only requires --upgrade-soak')
-const reportFile = upgradeRetained || upgradeSoak ? 'increasing-version-report.json' : 'report.json'
+const reportFile = phase7Upgrade
+  ? 'phase-7-upgrade-report.json'
+  : upgradeRetained || upgradeSoak
+    ? 'increasing-version-report.json'
+    : 'report.json'
 const phaseSeconds = Number(process.env.FLOWPLAN_SOAK_PHASE_SECONDS || 300)
 assert.ok(Number.isInteger(phaseSeconds) && phaseSeconds >= 60 && phaseSeconds <= 3600)
 const report = {
@@ -73,7 +82,31 @@ async function install(name) {
     await ps(`(Get-Item -LiteralPath ${quote(installer)}).VersionInfo.ProductName`),
     'FlowPlan Beta Acceptance',
   )
-  await run(installer, ['/S', `/D=${installed}`], { windowsHide: true, timeout: 120000 })
+  report.installations ??= []
+  try {
+    const result = await run(installer, ['/S', `/D=${installed}`], {
+      windowsHide: true,
+      timeout: 120000,
+    })
+    report.installations.push({
+      name,
+      sha256: await hash(installer),
+      exitCode: 0,
+      stdout: result.stdout,
+      stderr: result.stderr,
+    })
+  } catch (error) {
+    report.installations.push({
+      name,
+      sha256: await hash(installer),
+      exitCode: error.code,
+      stdout: error.stdout,
+      stderr: error.stderr,
+    })
+    await flush()
+    throw error
+  }
+  await flush()
   assert.ok(await exists(binary))
   assert.equal(
     await ps(`(Get-Item -LiteralPath ${quote(binary)}).VersionInfo.ProductName`),
@@ -212,7 +245,16 @@ await mkdir(root, { recursive: true })
 const resumeEmpty = process.argv.includes('--resume-empty')
 const resumeSoak = process.argv.includes('--soak-only') || upgradeSoak
 let seeded
-if (upgradeRetained) {
+if (phase7Upgrade) {
+  assert.ok(!resumeEmpty, 'Choose one audit mode')
+  assert.ok(!(await exists(resolve(root, reportFile))), 'Preserve the previous Phase 7 report')
+  const previous = JSON.parse(
+    await readFile(resolve(root, 'increasing-version-report.json'), 'utf8'),
+  )
+  assert.equal(previous.passed, true, 'Complete the Phase 6 audit first')
+  assert.equal(await hash(binary), previous.candidateBinaryHash)
+  seeded = JSON.parse(await readFile(resolve(root, 'external-backup.json'), 'utf8'))
+} else if (upgradeRetained) {
   assert.ok(!resumeSoak && !resumeEmpty, 'Choose one audit mode')
   assert.ok(!(await exists(resolve(root, reportFile))), 'Preserve the previous upgrade report')
   const previous = JSON.parse(await readFile(resolve(root, 'report.json'), 'utf8'))
@@ -250,7 +292,28 @@ if (upgradeRetained) {
   assert.ok(!(await exists(binary)), 'Acceptance installation already exists')
 }
 try {
-  if (upgradeRetained) {
+  if (phase7Upgrade) {
+    const version = () => ps(`(Get-Item -LiteralPath ${quote(binary)}).VersionInfo.ProductVersion`)
+    report.previousVersion = await version()
+    assert.match(report.previousVersion, /^0\.4\.1(?:\.|$)/)
+    await open('Phase 7 retained synthetic baseline')
+    assert.deepEqual(await invoke(main, 'read_workspace'), seeded)
+    const expectedPreferences = await preferences()
+    report.expectedPreferences = expectedPreferences
+    await close()
+    await install('candidate-setup-0.5.0-beta.1.exe')
+    report.candidateVersion = await version()
+    assert.equal(report.candidateVersion, '0.5.0-beta.1')
+    report.candidateBinaryHash = await hash(binary)
+    await open('Phase 7 isolated candidate upgrade')
+    assert.deepEqual(await invoke(main, 'read_workspace'), seeded)
+    assert.deepEqual(await preferences(), expectedPreferences)
+    assert.deepEqual(report.errors, [])
+    report.checks.push(
+      'Phase 7 isolated upgrade retained the complete synthetic workspace and selected preferences',
+    )
+    await close()
+  } else if (upgradeRetained) {
     await install('candidate-setup.exe')
     const version = () => ps(`(Get-Item -LiteralPath ${quote(binary)}).VersionInfo.ProductVersion`)
     report.previousVersion = await version()
