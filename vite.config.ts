@@ -3,11 +3,19 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  server: {
+    host: '127.0.0.1',
+    port: mode === 'desktop' ? 1420 : 5173,
+    strictPort: true,
+    watch: { ignored: ['**/src-tauri/**'] },
+  },
+  build: { outDir: mode === 'desktop' ? 'dist-desktop' : 'dist' },
   plugins: [
     react(),
     tailwindcss(),
     VitePWA({
+      disable: mode === 'desktop',
       registerType: 'prompt',
       includeAssets: ['favicon.svg'],
       manifest: {
@@ -28,4 +36,4 @@ export default defineConfig({
     include: ['src/**/*.test.{ts,tsx}'],
     restoreMocks: true,
   },
-})
+}))

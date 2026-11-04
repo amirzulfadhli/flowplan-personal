@@ -4,9 +4,25 @@ import hooks from 'eslint-plugin-react-hooks'
 import globals from 'globals'
 
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules', 'design', 'playwright-report', 'test-results'] },
+  {
+    ignores: [
+      'dist',
+      'dist-desktop',
+      'src-tauri/target',
+      'src-tauri/gen',
+      'node_modules',
+      'design',
+      'playwright-report',
+      'test-results',
+      'desktop-test-results',
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
+  },
   {
     files: ['**/*.{ts,tsx}'],
     languageOptions: { globals: { ...globals.browser, ...globals.node } },

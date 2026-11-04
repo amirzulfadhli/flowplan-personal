@@ -1,4 +1,5 @@
 import { Check, Plus, Search } from 'lucide-react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { dateKey, displayDate } from '../domain/dates'
 import { statusLabels, statuses, type Status, type Task } from '../domain/model'
@@ -92,6 +93,11 @@ export function TaskRow({ task, compact = false }: { task: Task; compact?: boole
   )
 }
 export function TaskList({ tasks }: { tasks: Task[] }) {
+  const [page, setPage] = useState(0)
+  const pageSize = 100
+  const lastPage = Math.max(0, Math.ceil(tasks.length / pageSize) - 1)
+  const currentPage = Math.min(page, lastPage)
+  const start = currentPage * pageSize
   return (
     <div className="card tasktable">
       {tasks.length ? (
@@ -103,9 +109,30 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
             <span>Due date</span>
             <span>Status</span>
           </div>
-          {tasks.map((task) => (
+          {tasks.slice(start, start + pageSize).map((task) => (
             <TaskRow key={task.id} task={task} />
           ))}
+          {tasks.length > pageSize && (
+            <nav className="toolbar p-4" aria-label="Task list pages">
+              <span className="subtle" role="status">
+                {start + 1}–{Math.min(start + pageSize, tasks.length)} of {tasks.length} tasks
+              </span>
+              <button
+                className="btn"
+                disabled={currentPage === 0}
+                onClick={() => setPage(currentPage - 1)}
+              >
+                Previous tasks
+              </button>
+              <button
+                className="btn"
+                disabled={currentPage === lastPage}
+                onClick={() => setPage(currentPage + 1)}
+              >
+                Next tasks
+              </button>
+            </nav>
+          )}
         </>
       ) : (
         <Empty>No tasks here yet. Add a task or adjust your filters.</Empty>

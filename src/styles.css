@@ -1524,7 +1524,10 @@ caption {
 }
 .editor-form input,
 .editor-form textarea,
-.editor-form select {
+.editor-form select,
+.ai-panel input:not([type='checkbox']),
+.ai-panel textarea,
+.ai-panel select {
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: 7px;

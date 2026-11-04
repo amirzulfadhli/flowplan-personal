@@ -1,9 +1,14 @@
-import { Component, StrictMode, type ErrorInfo, type ReactNode } from 'react'
+import { Component, StrictMode, Suspense, lazy, type ErrorInfo, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { HashRouter } from 'react-router-dom'
 import App from './App'
 import { WorkspaceProvider } from './state/WorkspaceContext'
 import './styles.css'
+import { isDesktop } from './storage/desktop'
+
+const floating = isDesktop() && new URLSearchParams(window.location.search).get('companion') === '1'
+const Companion = lazy(() => import('./desktop/Companion'))
+if (floating) document.getElementById('root')!.classList.add('companion-root')
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false }
@@ -31,9 +36,15 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
       <WorkspaceProvider>
-        <HashRouter>
-          <App />
-        </HashRouter>
+        {floating ? (
+          <Suspense fallback={<p>Opening companion…</p>}>
+            <Companion />
+          </Suspense>
+        ) : (
+          <HashRouter>
+            <App />
+          </HashRouter>
+        )}
       </WorkspaceProvider>
     </ErrorBoundary>
   </StrictMode>,

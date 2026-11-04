@@ -8,6 +8,7 @@ import { Card, Empty, PageHeader, Progress } from '../components/ui'
 import { useEditor } from '../components/Editors'
 import { AddTask, TaskRow } from '../components/Tasks'
 import { ProjectCard } from '../components/ProjectCard'
+import { isDesktop } from '../storage/desktop'
 
 export default function Dashboard() {
   const { data, execute, busy } = useWorkspace()
@@ -46,6 +47,22 @@ export default function Dashboard() {
         </button>
         <AddTask />
       </PageHeader>
+      {isDesktop() && data.projects.length === 0 && (
+        <Card title="Get started" className="mb-4">
+          <p className="note">
+            Create your first project above, or import a JSON backup in Settings. Your work stays on
+            this device; browser and desktop workspaces are separate.
+          </p>
+          <p className="note">
+            By default, closing the window keeps FlowPlan in the system tray. Use the tray menu or
+            Settings → Quit FlowPlan to exit completely. You can change close-to-tray and widget
+            preferences in Settings.
+          </p>
+          <Link className="linkbtn" to="/settings">
+            Open settings and backups ↗
+          </Link>
+        </Card>
+      )}
       <div className="micro-kpis">
         {[
           { label: 'Projects', value: data.projects.length, icon: Folder },

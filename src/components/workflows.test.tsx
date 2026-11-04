@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
@@ -25,6 +25,51 @@ function mount(repository: WorkspaceRepository, path = '/') {
   )
 }
 describe('user workflows', () => {
+  it('keeps a notes draft during an external change and requires loading the newer notes', async () => {
+    const user = userEvent.setup()
+    const repo = new IndexedDBRepository(crypto.randomUUID())
+    const source = fixture()
+    const id = source.projects[0].id
+    await repo.execute({ type: 'import', data: source })
+    mount(repo, `/projects/${id}`)
+    await user.click(await screen.findByRole('tab', { name: 'Notes' }))
+    await user.type(screen.getByLabelText('Project notes'), 'My draft')
+    await repo.execute({ type: 'notes', id, notes: 'New external decision' })
+    await act(async () => window.dispatchEvent(new Event('focus')))
+    await screen.findByRole('button', { name: 'Load latest notes' })
+    expect(screen.getByLabelText('Project notes')).toHaveValue('My draft')
+    expect(screen.getByRole('button', { name: 'Save notes' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Load latest notes' }))
+    expect(screen.getByLabelText('Project notes')).toHaveValue('New external decision')
+    await user.type(screen.getByLabelText('Project notes'), ' plus reviewed detail')
+    await user.click(screen.getByRole('button', { name: 'Save notes' }))
+    await waitFor(async () =>
+      expect((await repo.read()).projects[0].notes).toBe(
+        'New external decision plus reviewed detail',
+      ),
+    )
+  })
+  it('bounds task rows while preserving pagination, search, and editing', async () => {
+    const user = userEvent.setup()
+    const data = fixture()
+    data.tasks = Array.from({ length: 205 }, (_, i) => ({
+      ...data.tasks[0],
+      id: `task-${i}`,
+      title: `Task ${String(i).padStart(3, '0')}`,
+    }))
+    const repo = new IndexedDBRepository(crypto.randomUUID())
+    await repo.execute({ type: 'import', data })
+    mount(repo, '/tasks')
+    await screen.findByRole('button', { name: 'Task 000' })
+    expect(screen.queryByRole('button', { name: 'Task 100' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Next tasks' }))
+    await user.click(screen.getByRole('button', { name: 'Next tasks' }))
+    expect(screen.getByRole('button', { name: 'Next tasks' })).toBeDisabled()
+    await user.click(screen.getByLabelText('Search tasks'))
+    await user.paste('Task 050')
+    await user.click(screen.getByRole('button', { name: 'Task 050' }))
+    expect(within(screen.getByRole('dialog')).getByLabelText('Task title')).toHaveValue('Task 050')
+  }, 15000)
   it('creates a real project and task from an empty workspace', async () => {
     const user = userEvent.setup()
     const repo = new IndexedDBRepository(crypto.randomUUID())

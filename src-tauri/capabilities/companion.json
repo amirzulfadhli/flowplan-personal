@@ -1,0 +1,16 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "companion-workspace",
+  "description": "Local companion can read and update tasks and its own desktop controls. No filesystem or arbitrary SQL access.",
+  "windows": ["companion"],
+  "permissions": [
+    "allow-read-workspace",
+    "allow-commit-workspace",
+    "allow-companion-read",
+    "allow-companion-update",
+    "allow-desktop-action",
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "core:window:allow-is-focused"
+  ]
+}

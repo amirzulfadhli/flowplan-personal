@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { lazy, Suspense, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowUpRight, Pencil } from 'lucide-react'
 import { useWorkspace } from '../state/WorkspaceContext'
@@ -8,6 +8,7 @@ import { AddTask, TaskList, TaskRow } from '../components/Tasks'
 import { progress, sortedTasks } from '../domain/selectors'
 import { displayDate } from '../domain/dates'
 import type { Project } from '../domain/model'
+const ProjectAssistant = lazy(() => import('../ai/ProjectAssistant'))
 
 export default function ProjectDetail() {
   const { id } = useParams()
@@ -79,7 +80,7 @@ function ProjectWorkspace({ project }: { project: Project }) {
         <span className="subtle">Deadline: {displayDate(project.due)}</span>
       </div>
       <div className="tabs" role="tablist" aria-label="Project sections">
-        {['Overview', 'Tasks', 'Notes', 'Activity'].map((name) => (
+        {['Overview', 'Tasks', 'Notes', 'Activity', 'AI'].map((name) => (
           <button
             role="tab"
             aria-selected={tab === name}
@@ -95,6 +96,11 @@ function ProjectWorkspace({ project }: { project: Project }) {
         ))}
       </div>
       <div id="project-panel" role="tabpanel" aria-labelledby={`tab-${tab}`}>
+        {tab === 'AI' && (
+          <Suspense fallback={<p role="status">Opening project AI…</p>}>
+            <ProjectAssistant key={project.id} projectId={project.id} />
+          </Suspense>
+        )}
         {tab === 'Overview' && (
           <div className="homegrid">
             <div className="verticalgap">
@@ -155,14 +161,42 @@ function ProjectWorkspace({ project }: { project: Project }) {
 function Notes({ project }: { project: Project }) {
   const { execute, busy } = useWorkspace()
   const [notes, setNotes] = useState(project.notes)
+  const [baseNotes, setBaseNotes] = useState(project.notes)
   const [saved, setSaved] = useState(false)
+  const changedElsewhere = project.notes !== baseNotes
   async function save(e: FormEvent) {
     e.preventDefault()
-    setSaved(await execute({ type: 'notes', id: project.id, notes }))
+    const success = await execute({
+      type: 'notes',
+      id: project.id,
+      notes,
+      expectedNotes: baseNotes,
+    })
+    setSaved(success)
+    if (success) setBaseNotes(notes)
   }
   return (
     <Card title="Project notes" description="A place for decisions, milestones, and blockers.">
       <form className="editor-form" onSubmit={(e) => void save(e)}>
+        {changedElsewhere && (
+          <div role="alert">
+            <p>
+              These notes changed in another window. Your draft is preserved below. Copy anything
+              you want to keep before loading the latest notes.
+            </p>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => {
+                setNotes(project.notes)
+                setBaseNotes(project.notes)
+                setSaved(false)
+              }}
+            >
+              Load latest notes
+            </button>
+          </div>
+        )}
         <label className="sr-only" htmlFor="project-notes">
           Project notes
         </label>
@@ -177,7 +211,7 @@ function Notes({ project }: { project: Project }) {
           }}
         />
         <div className="flex items-center gap-3">
-          <button className="btn primary" disabled={busy}>
+          <button className="btn primary" disabled={busy || changedElsewhere}>
             Save notes
           </button>
           <span className="subtle" role="status">

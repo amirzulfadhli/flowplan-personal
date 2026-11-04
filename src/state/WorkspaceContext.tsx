@@ -9,9 +9,17 @@ import {
 } from 'react'
 import type { Command } from '../domain/commands'
 import type { Workspace } from '../domain/model'
-import { IndexedDBRepository, type WorkspaceRepository } from '../storage/repository'
+import type { WorkspaceRepository } from '../storage/repository'
+import { createRepository } from '../storage/factory'
+import { isDesktop } from '../storage/desktop'
+import { listen } from '@tauri-apps/api/event'
 
-const defaultRepository = new IndexedDBRepository()
+const defaultRepository = createRepository()
+function readFailure(error: unknown) {
+  if (isDesktop())
+    return `FlowPlan could not open its desktop database. ${error instanceof Error ? error.message : 'Check file permissions and available disk space.'} Existing data has not been replaced.`
+  return 'FlowPlan could not read local storage. Check browser storage permissions, then retry. Existing data has not been replaced.'
+}
 type Context = {
   data: Workspace
   execute: (command: Command) => Promise<boolean>
@@ -31,6 +39,10 @@ export function WorkspaceProvider({
   const [error, setError] = useState('')
   const [pending, setPending] = useState(0)
   const channel = useRef<BroadcastChannel | null>(null)
+  useEffect(() => {
+    if (data && !performance.getEntriesByName('flowplan-workspace-ready').length)
+      performance.mark('flowplan-workspace-ready')
+  }, [data])
   const accept = useCallback(
     (next: Workspace) =>
       setData((previous) => (!previous || next.revision >= previous.revision ? next : previous)),
@@ -40,26 +52,37 @@ export function WorkspaceProvider({
     try {
       accept(await repository.read())
       setError('')
-    } catch {
-      setError(
-        'FlowPlan could not read local storage. Check browser storage permissions, then retry. Existing data has not been replaced.',
-      )
+    } catch (error) {
+      setError(readFailure(error))
     }
   }, [repository, accept])
   useEffect(() => {
     let active = true
-    void repository
-      .read()
-      .then((next) => {
-        if (active) accept(next)
-      })
-      .catch(() => {
-        if (active)
-          setError(
-            'FlowPlan could not read local storage. Check browser storage permissions, then retry. Existing data has not been replaced.',
-          )
-      })
-    if (typeof BroadcastChannel !== 'undefined') {
+    // Desktop reads after subscribing below, avoiding a duplicate startup snapshot
+    // while ensuring commits between subscription and the initial read are observed.
+    if (!isDesktop())
+      void repository
+        .read()
+        .then((next) => {
+          if (active) accept(next)
+        })
+        .catch((error) => {
+          if (active) setError(readFailure(error))
+        })
+    const nativeListener = isDesktop()
+      ? listen('workspace-changed', () => {
+          if (active) void reload()
+        })
+      : null
+    if (nativeListener)
+      void nativeListener
+        .then(() => {
+          if (active) void reload()
+        })
+        .catch((error) => {
+          if (active) setError(readFailure(error))
+        })
+    if (!isDesktop() && typeof BroadcastChannel !== 'undefined') {
       channel.current = new BroadcastChannel('flowplan-changes')
       channel.current.onmessage = () => {
         void reload()
@@ -72,6 +95,7 @@ export function WorkspaceProvider({
     return () => {
       active = false
       channel.current?.close()
+      if (nativeListener) void nativeListener.then((stop) => stop()).catch(() => undefined)
       window.removeEventListener('focus', focus)
     }
   }, [reload, repository, accept])
