@@ -2,6 +2,8 @@
 
 This is a preparation checklist, not a release announcement. Keep AI optional and experimental. Do not widen distribution until the unchecked gates have evidence.
 
+Current follow-up: [Phase 8 validation record](phase-8-beta-validation.md). Actual tester reports are missing from the checked sources; human acceptance and defect resolution are blocked. Earlier checked engineering gates remain historical evidence, not new human passes.
+
 This checklist retains **Phase 6** evidence and open gates. Phase 7's candidate-specific identity and checks are in [its preparation record](phase-7-beta-preparation.md); human retests use the [manual acceptance sheet](beta-manual-acceptance.md). A new version does not clear the unchecked gates below.
 
 ## Candidate identity

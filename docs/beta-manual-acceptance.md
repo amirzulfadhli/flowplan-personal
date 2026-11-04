@@ -1,5 +1,7 @@
 # Supervised Windows acceptance sheet — 0.5.0-beta.1
 
+The [Phase 8 validation record](phase-8-beta-validation.md) tracks received evidence and current blockers. Keep this reusable sheet blank until an actual attended session produces results; engineering automation does not fill its human-result column.
+
 Use synthetic data on an attended test machine. Coordinator: ____ Tester alias: ____ Date/time/timezone: ____ Source commit: ____ Installer SHA-256: ____ Windows build/architecture: ____ WebView2: ____ Monitors/scaling: ____ Previous candidate: ____
 
 For each row record **Pass / Fail / Blocked / Not run**, expected/observed behavior, and a redacted report ID. Blank rows are not passes. Verify the hash and complete [backup preparation](beta-recovery.md) first. Do not disable security, remove a host runtime, or change the developer's host configuration for testing.
